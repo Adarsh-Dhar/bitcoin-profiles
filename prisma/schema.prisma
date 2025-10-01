@@ -1,0 +1,153 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Specifies the database provider and connection URL.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Specifies the client generator.
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Core model for application users.
+// Represents an individual who has connected their wallet.
+model User {
+  id            String    @id @default(cuid())
+  walletAddress String    @unique // User's unique Stacks wallet address
+  bnsName       String?   @unique // The user's BNS name, e.g., "satoshi.btc"
+  displayName   String?   // A user-chosen display name
+  profileImage  String?   // URL for the user's profile picture
+  bio           String?   // A short user biography
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // --- Relations ---
+
+  // Represents the keys associated with this user's profile that others can buy.
+  profileKeys   Key[]     @relation("ProfileKeys")
+  // Represents the keys of other users that this user currently owns.
+  ownedKeys     Key[]     @relation("OwnedKeys")
+
+  // The exclusive chat room created and controlled by this user.
+  createdChatRoom ChatRoom? @relation("ChatRoomCreator")
+  // A list of all chat rooms this user is a member of.
+  chatMemberships ChatMember[]
+  // All messages sent by this user across different chat rooms.
+  messagesSent    Message[]
+
+  // A record of trades where this user was the buyer.
+  tradesAsBuyer   Trade[]   @relation("BuyerTrades")
+  // A record of trades where this user was the seller.
+  tradesAsSeller  Trade[]   @relation("SellerTrades")
+}
+
+// Represents a "key" that grants access to a user's exclusive chat.
+// The price of these keys is determined by a bonding curve.
+model Key {
+  id        String   @id @default(cuid())
+  price     Float    // The current price of the key, dynamically updated.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Relations ---
+
+  // The user whose profile this key is associated with (the key's subject).
+  subjectId String
+  subject   User   @relation("ProfileKeys", fields: [subjectId], references: [id])
+
+  // The current owner of this specific key.
+  ownerId   String
+  owner     User   @relation("OwnedKeys", fields: [ownerId], references: [id])
+
+  // The history of all trades for this key.
+  trades    Trade[]
+
+  // A user can only own one key for any given subject.
+  @@unique([subjectId, ownerId])
+}
+
+// Represents the exclusive, token-gated chat room for a specific user.
+model ChatRoom {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // --- Relations ---
+
+  // The user who created and owns this chat room.
+  creatorId String   @unique
+  creator   User     @relation("ChatRoomCreator", fields: [creatorId], references: [id])
+
+  // The list of members who have access to this chat room.
+  members   ChatMember[]
+  // The messages sent within this chat room.
+  messages  Message[]
+}
+
+// This is a join table to create a many-to-many relationship
+// between Users and ChatRooms, representing membership.
+model ChatMember {
+  id        String   @id @default(cuid())
+  joinedAt  DateTime @default(now())
+
+  // --- Relations ---
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id])
+
+  // A user can only be a member of a specific chat room once.
+  @@unique([userId, chatRoomId])
+}
+
+// Represents a single message sent within a ChatRoom.
+model Message {
+  id        String   @id @default(cuid())
+  content   String   @db.Text // The text content of the message.
+  createdAt DateTime @default(now())
+
+  // --- Relations ---
+
+  // The user who sent the message.
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  // The chat room where the message was sent.
+  chatRoomId String
+  chatRoom   ChatRoom @relation(fields: [chatRoomId], references: [id])
+}
+
+// Records a historical transaction of a key being bought or sold.
+model Trade {
+  id              String    @id @default(cuid())
+  tradeType       TradeType // Enum: BUY or SELL
+  price           Float     // The price of the key at the time of the trade.
+  protocolFee     Float     // The fee paid to the protocol.
+  subjectFee      Float     // The fee paid to the key's subject (creator).
+  transactionHash String    @unique // The on-chain transaction hash for the trade.
+  createdAt       DateTime  @default(now())
+
+  // --- Relations ---
+
+  // The key that was involved in this trade.
+  keyId           String
+  key             Key       @relation(fields: [keyId], references: [id])
+
+  // The user who bought the key.
+  buyerId         String
+  buyer           User      @relation("BuyerTrades", fields: [buyerId], references: [id])
+
+  // The user who sold the key.
+  sellerId        String
+  seller          User      @relation("SellerTrades", fields: [sellerId], references: [id])
+}
+
+// Enum to define the type of trade.
+enum TradeType {
+  BUY
+  SELL
+}
