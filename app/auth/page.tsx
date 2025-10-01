@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -50,6 +51,17 @@ async function signMessage(address: string, message: string): Promise<string | n
 export default function AuthPage() {
   const [address, setAddress] = useState<string>('')
   const [loading, setLoading] = useState<boolean>(false)
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const redirectTo = useMemo(() => {
+    const r = searchParams?.get('redirect') || '/'
+    try {
+      const url = new URL(r, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+      return url.pathname + url.search + url.hash
+    } catch {
+      return '/'
+    }
+  }, [searchParams])
 
   const handleConnect = async () => {
     setLoading(true)
@@ -76,6 +88,7 @@ export default function AuthPage() {
       }
 
       toast.success('Wallet connected')
+      router.replace(redirectTo)
     } catch (e: any) {
       toast.error(e?.message || 'Failed to connect wallet')
     } finally {
