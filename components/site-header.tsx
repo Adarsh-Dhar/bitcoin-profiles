@@ -1,6 +1,9 @@
+"use client"
+
 import { Search, Wallet } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { appkit } from "@/app/provider"
 
 export function SiteHeader() {
   return (
@@ -16,7 +19,7 @@ export function SiteHeader() {
           <Input placeholder="Search profiles..." className="pl-10" />
         </div>
 
-        <Button className="ml-auto">
+        <Button className="ml-auto" onClick={() => appkit.open()}>
           <Wallet className="mr-2 h-4 w-4" />
           Connect Wallet
         </Button>
