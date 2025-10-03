@@ -17,8 +17,8 @@ generator client {
 model User {
   id            String    @id @default(cuid())
   walletAddress String    @unique // User's unique Stacks wallet address
-  bnsName       String?   @unique // The user's BNS name, e.g., "satoshi.btc"
-  displayName   String?   // A user-chosen display name
+  bnsName       String   @unique // The user's BNS name, e.g., "satoshi.btc"
+  displayName   String   // A user-chosen display name
   profileImage  String?   // URL for the user's profile picture
   bio           String?   // A short user biography
   createdAt     DateTime  @default(now())
