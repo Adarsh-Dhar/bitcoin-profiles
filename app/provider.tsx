@@ -1,6 +1,6 @@
 'use client'
 
-import { createAppKit } from '@reown/appkit/react'
+import { createAppKit, AppKitProvider } from '@reown/appkit/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { bitcoinAdapter, projectId, appkitNetworks } from '@/config'
 
@@ -32,7 +32,18 @@ type ContextProviderProps = {
 export default function ContextProvider({ children }: ContextProviderProps) {
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <AppKitProvider
+        adapters={[bitcoinAdapter]}
+        projectId={projectId}
+        networks={appkitNetworks}
+        defaultNetwork={bitcoinAdapter.networks[0]}
+        metadata={metadata}
+        features={{
+          analytics: true
+        }}
+      >
+        {children}
+      </AppKitProvider>
     </QueryClientProvider>
   )
 }

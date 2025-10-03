@@ -4,7 +4,8 @@ import { ChatInterface } from "@/components/chat-interface"
 import { HoldersList } from "@/components/holders-list"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-export default function ProfilePage({ params }: { params: { id: string } }) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function ProfilePage({ params: { id } }: { params: { id: string } }) {
   return (
     <div>
       <ProfileHeader

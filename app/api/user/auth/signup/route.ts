@@ -51,8 +51,8 @@ export async function POST(request: Request) {
       { user },
       { status: 201 }
     )
-  } catch (error: any) {
-    if (error?.code === 'P2002') {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json(
         { error: 'User with this walletAddress or bnsName already exists' },
         { status: 409 }

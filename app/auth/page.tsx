@@ -1,13 +1,18 @@
 "use client"
 
-import { useMemo, useState, useTransition } from "react"
+import { useEffect, useMemo, useState, useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import { useAppKit } from '@reown/appkit/react'
+import { appkit } from '@/app/provider'
 
 export default function AuthPage() {
+  const kit = useAppKit() as any
+  const address: string | undefined = kit?.address
+  const isConnected: boolean = Boolean(kit?.isConnected)
   const [walletAddress, setWalletAddress] = useState("")
   const [bnsName, setBnsName] = useState("")
   const [displayName, setDisplayName] = useState("")
@@ -15,6 +20,13 @@ export default function AuthPage() {
   const [bio, setBio] = useState("")
   const [loading, startTransition] = useTransition()
   const redirect = useMemo(() => new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('redirect') || '/', [])
+
+  // Autofill wallet address from connected wallet
+  useEffect(() => {
+    if (isConnected && address) {
+      setWalletAddress(address)
+    }
+  }, [isConnected, address])
 
   function isValid() {
     return walletAddress.trim() !== "" && bnsName.trim() !== "" && displayName.trim() !== ""
@@ -39,8 +51,11 @@ export default function AuthPage() {
         }
         toast.success("Account created")
         window.location.href = redirect || "/"
-      } catch (err: any) {
-        toast.error(err?.message || "Sign up failed")
+      } catch (err: unknown) {
+        const errorMessage = err && typeof err === 'object' && 'message' in err && typeof err.message === 'string' 
+          ? err.message 
+          : "Sign up failed"
+        toast.error(errorMessage)
       }
     })
   }
@@ -51,8 +66,21 @@ export default function AuthPage() {
       <p className="text-sm text-muted-foreground mb-6">Fill details to get started</p>
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="walletAddress">Wallet address</Label>
-          <Input id="walletAddress" value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} placeholder="SP2C..." />
+          <div className="flex items-center justify-between">
+            <Label htmlFor="walletAddress">Wallet address</Label>
+            {!isConnected && (
+              <Button type="button" variant="outline" size="sm" onClick={() => appkit.open()}>
+                Connect wallet
+              </Button>
+            )}
+          </div>
+          <Input
+            id="walletAddress"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            placeholder="Connect your wallet to autofill"
+            disabled={isConnected}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="bnsName">BNS name</Label>
