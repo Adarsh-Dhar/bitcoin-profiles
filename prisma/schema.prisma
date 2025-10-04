@@ -31,8 +31,8 @@ model User {
   // Represents the keys of other users that this user currently owns.
   ownedKeys     Key[]     @relation("OwnedKeys")
 
-  // The exclusive chat room created and controlled by this user.
-  createdChatRoom ChatRoom? @relation("ChatRoomCreator")
+  // The chat rooms created and controlled by this user.
+  createdChatRooms ChatRoom[] @relation("ChatRoomCreator")
   // A list of all chat rooms this user is a member of.
   chatMemberships ChatMember[]
   // All messages sent by this user across different chat rooms.
@@ -71,13 +71,16 @@ model Key {
 
 // Represents the exclusive, token-gated chat room for a specific user.
 model ChatRoom {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String   // The name of the chat room
+  description String?  // Optional description of the chat room
+  isPrivate   Boolean  @default(false) // Whether the chat room is private
+  createdAt   DateTime @default(now())
 
   // --- Relations ---
 
   // The user who created and owns this chat room.
-  creatorId String   @unique
+  creatorId String
   creator   User     @relation("ChatRoomCreator", fields: [creatorId], references: [id])
 
   // The list of members who have access to this chat room.

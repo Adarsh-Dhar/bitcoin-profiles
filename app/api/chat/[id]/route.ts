@@ -30,7 +30,10 @@ export async function GET(
           }
         },
         members: {
-          include: {
+          select: {
+            id: true,
+            role: true,
+            joinedAt: true,
             user: {
               select: {
                 id: true,

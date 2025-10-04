@@ -137,6 +137,8 @@ export function ConnectWalletButton() {
         if (btcAddress) {
           setUserAddress(btcAddress.address)
           setIsConnected(true)
+          // Store wallet address in localStorage for persistence
+          localStorage.setItem('walletAddress', btcAddress.address)
           toast.success('Wallet connected successfully!')
         } else {
           throw new Error('No Bitcoin address found in wallet')
@@ -176,6 +178,8 @@ export function ConnectWalletButton() {
   const disconnectWallet = () => {
     setIsConnected(false)
     setUserAddress('')
+    // Remove wallet address from localStorage
+    localStorage.removeItem('walletAddress')
     toast.success('Wallet disconnected')
   }
 

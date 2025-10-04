@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
-    const { walletAddress } = await request.json()
+    const { walletAddress, name, description, isPrivate } = await request.json()
 
     if (!walletAddress) {
       return NextResponse.json(
@@ -24,29 +24,22 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if user already has a chat room
-    const existingChatRoom = await prisma.chatRoom.findUnique({
-      where: { creatorId: user.id }
-    })
-
-    if (existingChatRoom) {
-      return NextResponse.json(
-        { error: 'User already has a chat room' },
-        { status: 409 }
-      )
-    }
+    // Users can now create multiple chat rooms, so no need to check for existing ones
 
     // Create the chat room and add the creator as an ADMIN member
     const chatRoom = await prisma.chatRoom.create({
       data: {
         creatorId: user.id,
+        name: name || `${user.displayName}'s Chat Room`,
+        description: description || null,
+        isPrivate: isPrivate || false,
         members: {
           create: {
             userId: user.id,
             role: 'ADMIN'
           }
         }
-      },
+      } as any,
       include: {
         creator: {
           select: {
