@@ -5,7 +5,6 @@ import "./globals.css"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { SiteHeader } from "@/components/site-header"
 import { ThemeProvider } from "@/components/theme-provider"
-import ContextProvider from "@/app/provider"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 
 const inter = Inter({
@@ -28,7 +27,6 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} dark`}>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <ContextProvider>
             <div className="flex min-h-screen">
               <SidebarNav />
               <div className="flex-1 flex flex-col ml-60">
@@ -39,7 +37,6 @@ export default function RootLayout({
               </div>
             </div>
             <SonnerToaster richColors position="top-right" />
-          </ContextProvider>
         </ThemeProvider>
       </body>
     </html>
