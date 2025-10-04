@@ -47,7 +47,7 @@ export default function WalletTestPage() {
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Once connected, you can test sending Bitcoin using the "Send Bitcoin (Test)" button.
+                  Once connected, you can test sending Bitcoin using the &quot;Send Bitcoin (Test)&quot; button.
                 </p>
                 <Badge variant="secondary">Test Mode</Badge>
               </div>
@@ -67,7 +67,7 @@ export default function WalletTestPage() {
             <CardContent>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Once connected, you can test signing PSBTs using the "Sign PSBT (Test)" button.
+                  Once connected, you can test signing PSBTs using the &quot;Sign PSBT (Test)&quot; button.
                 </p>
                 <Badge variant="secondary">Test Mode</Badge>
               </div>
@@ -98,7 +98,7 @@ export default function WalletTestPage() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold">2.</span>
-                <p>Click "Connect Leather Wallet" to open the wallet connection popup</p>
+                <p>Click &quot;Connect Leather Wallet&quot; to open the wallet connection popup</p>
               </div>
               <div className="flex items-start gap-2">
                 <span className="font-semibold">3.</span>

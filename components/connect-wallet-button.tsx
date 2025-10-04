@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { setupGlobalErrorSuppression } from '@/lib/error-suppression'
 
 interface LeatherProvider {
-  request: (method: string, params?: any) => Promise<any>
+  request: (method: string, params?: unknown) => Promise<unknown>
 }
 
 declare global {
@@ -17,12 +17,23 @@ declare global {
 }
 
 interface UserAddresses {
-  [x: string]: any
-  addresses: Array<{
+  [x: string]: unknown
+  addresses?: Array<{
     address: string
     publicKey: string
     derivationPath: string
+    symbol?: string
+    type?: string
   }>
+  result?: {
+    addresses?: Array<{
+      address: string
+      publicKey: string
+      derivationPath: string
+      symbol?: string
+      type?: string
+    }>
+  }
 }
 
 export function ConnectWalletButton() {
@@ -50,7 +61,7 @@ export function ConnectWalletButton() {
         } else {
           setIsLeatherInstalled(false)
         }
-      } catch (error) {
+      } catch {
         // Silently handle errors to prevent console spam
         if (isMounted) {
           setIsLeatherInstalled(false)
@@ -91,7 +102,7 @@ export function ConnectWalletButton() {
       // Wrap the request in a try-catch to handle JSON parsing errors
       let userAddresses: UserAddresses
       try {
-        userAddresses = await window.LeatherProvider.request('getAddresses')
+        userAddresses = await window.LeatherProvider.request('getAddresses') as UserAddresses
       } catch (requestError) {
         // Suppress known extension errors from console
         const errorMessage = requestError instanceof Error ? requestError.message : String(requestError)
@@ -115,11 +126,11 @@ export function ConnectWalletButton() {
       // Handle JSON-RPC response format
       const addresses = userAddresses?.result?.addresses || userAddresses?.addresses
       
-      if (addresses && addresses.length > 0) {
+      if (addresses && Array.isArray(addresses) && addresses.length > 0) {
         // Find the first Bitcoin address (prefer P2WPKH over P2TR)
-        const btcAddress = addresses.find((addr: any) => 
+        const btcAddress = addresses.find((addr) => 
           addr.symbol === 'BTC' && addr.type === 'p2wpkh'
-        ) || addresses.find((addr: any) => 
+        ) || addresses.find((addr) => 
           addr.symbol === 'BTC'
         )
         
@@ -226,7 +237,7 @@ export function ConnectWalletButton() {
   return (
     <div className="space-y-2">
       <Button 
-        onClick={(e) => connectWallet()}
+        onClick={() => connectWallet()}
         disabled={isLoading}
         className="w-full"
       >

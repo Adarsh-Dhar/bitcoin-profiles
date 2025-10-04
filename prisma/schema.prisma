@@ -91,6 +91,7 @@ model ChatRoom {
 model ChatMember {
   id        String   @id @default(cuid())
   joinedAt  DateTime @default(now())
+  role      ChatRole @default(NON_MEMBER) // Membership type: ADMIN, MEMBER, or NON_MEMBER
 
   // --- Relations ---
 
@@ -150,4 +151,11 @@ model Trade {
 enum TradeType {
   BUY
   SELL
+}
+
+// Enum to define the role of a chat member.
+enum ChatRole {
+  ADMIN
+  MEMBER
+  NON_MEMBER
 }

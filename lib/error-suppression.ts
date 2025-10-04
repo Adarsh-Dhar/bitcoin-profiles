@@ -8,7 +8,7 @@ export const setupGlobalErrorSuppression = () => {
   const originalConsoleLog = console.log
 
   // Function to check if an error should be suppressed
-  const shouldSuppressError = (message: any): boolean => {
+  const shouldSuppressError = (message: unknown): boolean => {
     if (typeof message === 'string') {
       return message.includes('inpage.js') || 
              message.includes('postMessage') ||
@@ -23,21 +23,21 @@ export const setupGlobalErrorSuppression = () => {
   }
 
   // Override console.error to filter out wallet extension errors
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     if (!shouldSuppressError(args[0])) {
       originalConsoleError.apply(console, args)
     }
   }
 
   // Override console.warn to filter out wallet extension errors
-  console.warn = (...args: any[]) => {
+  console.warn = (...args: unknown[]) => {
     if (!shouldSuppressError(args[0])) {
       originalConsoleWarn.apply(console, args)
     }
   }
 
   // Override console.log to filter out wallet extension errors
-  console.log = (...args: any[]) => {
+  console.log = (...args: unknown[]) => {
     if (!shouldSuppressError(args[0])) {
       originalConsoleLog.apply(console, args)
     }
