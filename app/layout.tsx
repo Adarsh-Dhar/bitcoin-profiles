@@ -6,6 +6,8 @@ import { SidebarNav } from "@/components/sidebar-nav"
 import { SiteHeader } from "@/components/site-header"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster as SonnerToaster } from "@/components/ui/sonner"
+import { ErrorBoundary } from "@/components/error-boundary"
+import { setupGlobalErrorSuppression } from "@/lib/error-suppression"
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,10 +25,16 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // Initialize error suppression early
+  if (typeof window !== 'undefined') {
+    setupGlobalErrorSuppression()
+  }
+
   return (
     <html lang="en" className={`${inter.variable} dark`}>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <ErrorBoundary>
             <div className="flex min-h-screen">
               <SidebarNav />
               <div className="flex-1 flex flex-col ml-60">
@@ -37,6 +45,7 @@ export default function RootLayout({
               </div>
             </div>
             <SonnerToaster richColors position="top-right" />
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>
