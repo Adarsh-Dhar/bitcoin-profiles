@@ -1,0 +1,32 @@
+---
+id: 0
+name: Devnet deployment
+network: devnet
+stacks-node: "http://localhost:20443"
+bitcoin-node: "http://devnet:devnet@localhost:18443"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: Factory
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 47080
+            path: contracts/Factory.clar
+            anchor-block-only: true
+            clarity-version: 1
+        - contract-publish:
+            contract-name: KeyToken
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 44280
+            path: contracts/KeyToken.clar
+            anchor-block-only: true
+            clarity-version: 1
+        - contract-publish:
+            contract-name: KeyVendingMachine
+            expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            cost: 68500
+            path: contracts/KeyVendingMachine.clar
+            anchor-block-only: true
+            clarity-version: 1
+      epoch: "2.05"
