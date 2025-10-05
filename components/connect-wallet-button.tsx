@@ -202,14 +202,6 @@ export function ConnectWalletButton() {
         <p className="text-xs text-muted-foreground text-center">
           Please install the <a href="https://leather.io" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Leather wallet extension</a>
         </p>
-        <Button 
-          onClick={refreshPage}
-          variant="ghost"
-          size="sm"
-          className="w-full text-xs"
-        >
-          Refresh Page
-        </Button>
       </div>
     )
   }
@@ -256,14 +248,6 @@ export function ConnectWalletButton() {
             Connect Leather Wallet
           </>
         )}
-      </Button>
-      <Button 
-        onClick={refreshPage}
-        variant="ghost"
-        size="sm"
-        className="w-full text-xs"
-      >
-        Refresh Page
       </Button>
     </div>
   )
