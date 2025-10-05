@@ -1,0 +1,32 @@
+---
+id: 0
+name: Testnet deployment
+network: testnet
+stacks-node: "https://api.testnet.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoind.testnet.stacks.co:18332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: Factory
+            expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
+            cost: 569264
+            path: contracts/Factory.clar
+            anchor-block-only: true
+            clarity-version: 1
+        - contract-publish:
+            contract-name: KeyToken
+            expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
+            cost: 569059
+            path: contracts/KeyToken.clar
+            anchor-block-only: true
+            clarity-version: 1
+        - contract-publish:
+            contract-name: KeyVendingMachine
+            expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
+            cost: 570288
+            path: contracts/KeyVendingMachine.clar
+            anchor-block-only: true
+            clarity-version: 1
+      epoch: "2.05"

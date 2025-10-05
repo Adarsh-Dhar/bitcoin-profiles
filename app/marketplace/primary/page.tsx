@@ -70,6 +70,13 @@ export default function PrimaryMarketplacePage() {
     try {
       // Quote on-chain for 1 key and add 2% slippage buffer
       const quote: any = await getBuyPrice(BigInt(1))
+      // Surface contract identifier for quick debugging
+      try {
+        const addr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'
+        const name = process.env.NEXT_PUBLIC_VENDING_NAME || 'KeyVendingMachine'
+        // eslint-disable-next-line no-console
+        console.log('[buy-debug] using contract', `${addr}.${name}`)
+      } catch {}
       // Handle decoded cvToJSON tuple shape: fields contain { type, value }
       const totalCostRaw = quote?.["total-cost"]?.value ?? quote?.total_cost?.value ?? quote?.["total-cost"] ?? quote?.total_cost ?? 0
       const totalCost = typeof totalCostRaw === 'bigint' ? totalCostRaw : BigInt(totalCostRaw)

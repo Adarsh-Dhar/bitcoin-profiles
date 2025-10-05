@@ -6,6 +6,15 @@ export function useKeyVendingMachineContract() {
   const call = async (functionName: string, functionArgs: any[]) => {
     const senderAddress = getSenderAddress();
     if (!senderAddress) throw new Error('Wallet not connected');
+    try {
+      // Helpful runtime logging for debugging contract identity
+      // eslint-disable-next-line no-console
+      console.log('[contract:call]', {
+        contract: `${CONTRACT_ADDRESS}.${VENDING_NAME}`,
+        functionName,
+        network: (network as any)?.url || (network as any)?.coreApiUrl,
+      });
+    } catch {}
     await openContractCall({
       contractAddress: CONTRACT_ADDRESS,
       contractName: VENDING_NAME,
@@ -19,6 +28,15 @@ export function useKeyVendingMachineContract() {
 
   const ro = async (functionName: string, functionArgs: any[] = []) => {
     const senderAddress = getSenderAddress();
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[contract:ro]', {
+        contract: `${CONTRACT_ADDRESS}.${VENDING_NAME}`,
+        functionName,
+        senderAddress: senderAddress || CONTRACT_ADDRESS,
+        network: (network as any)?.url || (network as any)?.coreApiUrl,
+      });
+    } catch {}
     const result = await fetchCallReadOnlyFunction({
       contractAddress: CONTRACT_ADDRESS,
       contractName: VENDING_NAME,
