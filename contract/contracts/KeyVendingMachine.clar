@@ -51,7 +51,7 @@
 
 (define-read-only (get-current-supply)
   (let ()
-    (unwrap-panic (contract-call? .KeyToken get-total-supply))
+    (unwrap-panic (contract-call? (var-get key-token-contract) get-total-supply))
   )
 )
 
@@ -122,14 +122,18 @@
     ;; Transfer sBTC from buyer to this contract
     (unwrap! (stx-transfer-sbtc total-cost buyer (as-contract tx-sender)) err-transfer-failed)
     
-    ;; Distribute fees
-    (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
-    (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
+    ;; Distribute fees (only if fees > 0)
+    (if (> creator-fee u0)
+      (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
+    )
+    (if (> protocol-fee u0)
+      (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
+    )
     
     ;; Mint keys to buyer
     (let ()
       (asserts!
-        (is-ok (as-contract (contract-call? .KeyToken mint amount buyer)))
+        (is-ok (as-contract (contract-call? (var-get key-token-contract) mint amount buyer)))
         err-mint-failed
       )
     )
@@ -163,14 +167,18 @@
     ;; Burn keys from seller
     (let ()
       (asserts!
-        (is-ok (as-contract (contract-call? .KeyToken burn amount seller)))
+        (is-ok (as-contract (contract-call? (var-get key-token-contract) burn amount seller)))
         err-burn-failed
       )
     )
     
-    ;; Distribute fees
-    (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
-    (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
+    ;; Distribute fees (only if fees > 0)
+    (if (> creator-fee u0)
+      (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
+    )
+    (if (> protocol-fee u0)
+      (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
+    )
     
     ;; Pay seller
     (unwrap! (as-contract (stx-transfer-sbtc net-payout tx-sender seller)) err-transfer-failed)
