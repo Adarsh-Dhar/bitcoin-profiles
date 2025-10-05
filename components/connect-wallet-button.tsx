@@ -127,21 +127,32 @@ export function ConnectWalletButton() {
       const addresses = userAddresses?.result?.addresses || userAddresses?.addresses
       
       if (addresses && Array.isArray(addresses) && addresses.length > 0) {
-        // Find the first Bitcoin address (prefer P2WPKH over P2TR)
+        // Prefer STX address for contract interactions; Leather returns STX under symbol 'STX'
+        const stxAddress = addresses.find((addr) => addr.symbol === 'STX')
+        // Fallback: show BTC address for UI badge if STX not found
         const btcAddress = addresses.find((addr) => 
           addr.symbol === 'BTC' && addr.type === 'p2wpkh'
-        ) || addresses.find((addr) => 
-          addr.symbol === 'BTC'
-        )
-        
-        if (btcAddress) {
+        ) || addresses.find((addr) => addr.symbol === 'BTC')
+
+        if (stxAddress) {
+          setUserAddress(stxAddress.address)
+          setIsConnected(true)
+          // Persist STX by network namespace for `getSenderAddress` fallback
+          try {
+            const net = process.env.NEXT_PUBLIC_STACKS_NETWORK?.toLowerCase() === 'mainnet' ? 'mainnet' : 'testnet'
+            const localKey = net === 'mainnet' ? 'stxAddress-mainnet' : 'stxAddress-testnet'
+            localStorage.setItem(localKey, stxAddress.address)
+          } catch {}
+          // Also keep legacy key for display
+          localStorage.setItem('walletAddress', stxAddress.address)
+          toast.success('Wallet connected successfully!')
+        } else if (btcAddress) {
           setUserAddress(btcAddress.address)
           setIsConnected(true)
-          // Store wallet address in localStorage for persistence
           localStorage.setItem('walletAddress', btcAddress.address)
           toast.success('Wallet connected successfully!')
         } else {
-          throw new Error('No Bitcoin address found in wallet')
+          throw new Error('No STX or BTC address found in wallet')
         }
       } else {
         throw new Error('No addresses returned from wallet')

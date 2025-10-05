@@ -6,9 +6,16 @@ export const userSession = new UserSession({ appConfig });
 
 export const network = (() => {
   const env = process.env.NEXT_PUBLIC_STACKS_NETWORK?.toLowerCase();
+  const apiUrl = process.env.NEXT_PUBLIC_STACKS_API_URL || 'http://localhost:20443';
+
   if (env === 'mainnet') return STACKS_MAINNET;
   if (env === 'testnet') return STACKS_TESTNET;
-  return STACKS_DEVNET;
+  if (env === 'devnet') return STACKS_DEVNET;
+  // devnet/mocknet (Clarinet). Ensure we point to the local Clarinet node.
+  const devnet: any = { ...STACKS_DEVNET };
+  devnet.url = apiUrl;
+  devnet.coreApiUrl = apiUrl;
+  return devnet;
 })();
 
 export function authenticate() {
@@ -20,10 +27,19 @@ export function authenticate() {
 }
 
 export function getSenderAddress(): string | undefined {
-  if (!userSession.isUserSignedIn()) return undefined;
-  const data = userSession.loadUserData();
   const net = (network as any)?.chainId === 1 ? 'mainnet' : 'testnet';
-  return data?.profile?.stxAddress?.[net];
+  if (userSession.isUserSignedIn()) {
+    const data = userSession.loadUserData();
+    const fromSession = data?.profile?.stxAddress?.[net];
+    if (fromSession) return fromSession;
+  }
+  try {
+    // Fallback to Leather-provided STX address persisted by the UI
+    const localKey = net === 'mainnet' ? 'stxAddress-mainnet' : 'stxAddress-testnet';
+    const fromStorage = typeof window !== 'undefined' ? localStorage.getItem(localKey) : null;
+    if (fromStorage) return fromStorage;
+  } catch {}
+  return undefined;
 }
 
 export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';

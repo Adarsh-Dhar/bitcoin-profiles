@@ -1,5 +1,5 @@
 import { openContractCall } from '@stacks/connect';
-import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV } from '@stacks/transactions';
+import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, cvToJSON, ClarityValue } from '@stacks/transactions';
 import { CONTRACT_ADDRESS, VENDING_NAME, network, getSenderAddress } from './stacks';
 
 export function useKeyVendingMachineContract() {
@@ -19,7 +19,7 @@ export function useKeyVendingMachineContract() {
 
   const ro = async (functionName: string, functionArgs: any[] = []) => {
     const senderAddress = getSenderAddress();
-    return fetchCallReadOnlyFunction({
+    const result = await fetchCallReadOnlyFunction({
       contractAddress: CONTRACT_ADDRESS,
       contractName: VENDING_NAME,
       functionName,
@@ -27,6 +27,14 @@ export function useKeyVendingMachineContract() {
       network,
       senderAddress: senderAddress || CONTRACT_ADDRESS,
     });
+    return result;
+  };
+
+  const roDecoded = async (functionName: string, functionArgs: any[] = []) => {
+    const cv: ClarityValue = await ro(functionName, functionArgs);
+    const json = cvToJSON(cv);
+    // cvToJSON returns { type, value } where value can be a map/object of fields
+    return json?.value as any;
   };
 
   return {
@@ -35,15 +43,17 @@ export function useKeyVendingMachineContract() {
       call('initialize', [standardPrincipalCV(creator), standardPrincipalCV(treasury), standardPrincipalCV(tokenContract)]),
     setProtocolTreasury: (treasury: string) => call('set-protocol-treasury', [standardPrincipalCV(treasury)]),
 
-    // pricing read-onlys
-    getCurrentSupply: () => ro('get-current-supply'),
-    calculatePriceAtSupply: (supply: number) => ro('calculate-price-at-supply', [uintCV(supply)]),
-    getBuyPrice: (amount: number) => ro('get-buy-price', [uintCV(amount)]),
-    getSellPrice: (amount: number) => ro('get-sell-price', [uintCV(amount)]),
+    // pricing read-onlys (decoded to plain JSON values)
+    getCurrentSupply: () => roDecoded('get-current-supply'),
+    calculatePriceAtSupply: (supply: number | bigint) => roDecoded('calculate-price-at-supply', [uintCV(supply as any)]),
+    getBuyPrice: (amount: number | bigint) => roDecoded('get-buy-price', [uintCV(amount as any)]),
+    getSellPrice: (amount: number | bigint) => roDecoded('get-sell-price', [uintCV(amount as any)]),
 
     // trading
-    buyKeys: (amount: number, maxPrice: number) => call('buy-keys', [uintCV(amount), uintCV(maxPrice)]),
-    sellKeys: (amount: number, minPayout: number) => call('sell-keys', [uintCV(amount), uintCV(minPayout)]),
+    buyKeys: (amount: number | bigint, maxPrice: number | bigint) =>
+      call('buy-keys', [uintCV(amount as any), uintCV(maxPrice as any)]),
+    sellKeys: (amount: number | bigint, minPayout: number | bigint) =>
+      call('sell-keys', [uintCV(amount as any), uintCV(minPayout as any)]),
   };
 }
 

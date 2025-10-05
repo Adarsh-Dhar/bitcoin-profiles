@@ -69,11 +69,13 @@ export default function PrimaryMarketplacePage() {
   const handleBuyOneKey = async () => {
     try {
       // Quote on-chain for 1 key and add 2% slippage buffer
-      const ro: any = await getBuyPrice(1)
-      // Support various shapes from stacks js
-      const total = Number(ro?.["total-cost"] ?? ro?.total_cost ?? ro?.value?.["total-cost"] ?? 0)
-      const maxWithBuffer = Math.ceil(total * 1.02)
-      await buyKeys(1, maxWithBuffer)
+      const quote: any = await getBuyPrice(BigInt(1))
+      // Handle decoded cvToJSON tuple shape: fields contain { type, value }
+      const totalCostRaw = quote?.["total-cost"]?.value ?? quote?.total_cost?.value ?? quote?.["total-cost"] ?? quote?.total_cost ?? 0
+      const totalCost = typeof totalCostRaw === 'bigint' ? totalCostRaw : BigInt(totalCostRaw)
+      // 2% buffer using integer math: ceil(total * 1.02) -> (total * 102) / 100
+      const maxWithBuffer = (totalCost * BigInt(102)) / BigInt(100)
+      await buyKeys(BigInt(1), maxWithBuffer)
       toast.success("Purchase submitted")
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)

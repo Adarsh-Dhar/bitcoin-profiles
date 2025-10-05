@@ -18,14 +18,14 @@ plan:
         - contract-publish:
             contract-name: KeyToken
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 44280
+            cost: 43540
             path: contracts/KeyToken.clar
             anchor-block-only: true
             clarity-version: 1
         - contract-publish:
             contract-name: KeyVendingMachine
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            cost: 68500
+            cost: 68440
             path: contracts/KeyVendingMachine.clar
             anchor-block-only: true
             clarity-version: 1
