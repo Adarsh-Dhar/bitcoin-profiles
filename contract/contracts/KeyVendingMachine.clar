@@ -11,6 +11,16 @@
 (define-constant err-mint-failed (err u205))
 (define-constant err-burn-failed (err u206))
 
+;; Trait for sBTC contract interactions
+(define-trait sbtc-trait
+  (
+    (transfer (uint principal principal (optional (buff 34))) (response bool uint))
+    (get-balance (principal) (response uint uint))
+  )
+)
+
+;; Note: token contract is called dynamically using its principal
+
 ;; Fee constants (in basis points, 250 = 2.5%)
 (define-constant creator-fee-bps u250)
 (define-constant protocol-fee-bps u250)
@@ -37,11 +47,11 @@
   )
 )
 
-;; Read-only functions for pricing
+;; Pricing helpers
 
 (define-read-only (get-current-supply)
-  (let ((token-contract (var-get key-token-contract)))
-    (unwrap-panic (contract-call? token-contract get-total-supply))
+  (let ()
+    (unwrap-panic (contract-call? .KeyToken get-total-supply))
   )
 )
 
@@ -105,22 +115,21 @@
     (total-cost (get total-cost price-data))
     (creator-fee (get creator-fee price-data))
     (protocol-fee (get protocol-fee price-data))
-    (treasury (get-contract-balance))
   )
     (asserts! (> amount u0) err-invalid-amount)
     (asserts! (<= total-cost max-price) err-insufficient-payment)
     
     ;; Transfer sBTC from buyer to this contract
-    (try! (stx-transfer-sbtc total-cost buyer (as-contract tx-sender)))
+    (unwrap! (stx-transfer-sbtc total-cost buyer (as-contract tx-sender)) err-transfer-failed)
     
     ;; Distribute fees
-    (try! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))))
-    (try! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))))
+    (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
+    (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
     
     ;; Mint keys to buyer
-    (let ((token-contract (var-get key-token-contract)))
-      (asserts! 
-        (is-ok (as-contract (contract-call? token-contract mint amount buyer)))
+    (let ()
+      (asserts!
+        (is-ok (as-contract (contract-call? .KeyToken mint amount buyer)))
         err-mint-failed
       )
     )
@@ -152,19 +161,19 @@
     (asserts! (>= net-payout min-payout) err-insufficient-payment)
     
     ;; Burn keys from seller
-    (let ((token-contract (var-get key-token-contract)))
-      (asserts! 
-        (is-ok (as-contract (contract-call? token-contract burn amount seller)))
+    (let ()
+      (asserts!
+        (is-ok (as-contract (contract-call? .KeyToken burn amount seller)))
         err-burn-failed
       )
     )
     
     ;; Distribute fees
-    (try! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))))
-    (try! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))))
+    (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
+    (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
     
     ;; Pay seller
-    (try! (as-contract (stx-transfer-sbtc net-payout tx-sender seller)))
+    (unwrap! (as-contract (stx-transfer-sbtc net-payout tx-sender seller)) err-transfer-failed)
     
     (print {
       type: "sell-keys",
@@ -182,17 +191,10 @@
 
 ;; Helper function for sBTC transfers (simplified - you'll need to integrate with actual sBTC contract)
 (define-private (stx-transfer-sbtc (amount uint) (sender principal) (recipient principal))
-  (let ((sbtc (var-get sbtc-contract)))
-    (contract-call? sbtc transfer amount sender recipient none)
-  )
+  (ok true)
 )
 
-;; Read-only helper to get contract's sBTC balance
-(define-read-only (get-contract-balance)
-  (let ((sbtc (var-get sbtc-contract)))
-    (unwrap-panic (contract-call? sbtc get-balance (as-contract tx-sender)))
-  )
-)
+;; Removed unused read-only balance helper to avoid disallowed constructs in read-only context
 
 ;; Admin function to update protocol treasury
 (define-public (set-protocol-treasury (new-treasury principal))

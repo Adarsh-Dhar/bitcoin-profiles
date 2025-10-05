@@ -1,7 +1,6 @@
 ;; KeyToken Contract - SIP-010 Fungible Token
 ;; Each creator gets their own instance of this token
 
-(impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -57,7 +56,7 @@
     (let ((sender-balance (unwrap! (get-balance sender) err-insufficient-balance)))
       (asserts! (>= sender-balance amount) err-insufficient-balance)
       
-      (try! (ft-transfer-helper amount sender recipient))
+      (unwrap! (ft-transfer-helper amount sender recipient) err-invalid-amount)
       
       (print {
         type: "transfer",
