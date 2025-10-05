@@ -55,6 +55,20 @@ export function useKeyTokenContract() {
     // minter-only
     mint: (amount: number, recipient: string) => call('mint', [uintCV(amount), standardPrincipalCV(recipient)]),
     burn: (amount: number, owner: string) => call('burn', [uintCV(amount), standardPrincipalCV(owner)]),
+
+    // convenience helpers
+    mintToSelf: (amount: number) => {
+      const sender = getSenderAddress();
+      if (!sender) throw new Error('Wallet not connected');
+      return call('mint', [uintCV(amount), standardPrincipalCV(sender)]);
+    },
+    mintBatch: (items: Array<{ amount: number; recipient: string }>) => {
+      // Executes sequentially to preserve clear signing flow in the wallet UI
+      return items.reduce<Promise<void>>(async (prev, { amount, recipient }) => {
+        await prev;
+        await call('mint', [uintCV(amount), standardPrincipalCV(recipient)]);
+      }, Promise.resolve());
+    },
   };
 }
 
