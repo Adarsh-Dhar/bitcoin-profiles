@@ -89,27 +89,26 @@ export default function KeysPage() {
           console.log('Checking keys for address:', address)
           console.log('Using contract:', process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, process.env.NEXT_PUBLIC_KEYTOKEN_NAME)
           
-          // Get balance for the current key token contract
-          const balanceResult = await keyTokenContract.getBalance(address)
-          const balance = (balanceResult as any)?.value || 0
-          
-          console.log('Balance result:', balanceResult)
-          console.log('Balance value:', balance)
+          // Get balance for the current key token contract (decoded)
+          const balanceBig = await keyTokenContract.getBalanceDecoded(address)
+          const balance = Number(typeof balanceBig === 'bigint' ? balanceBig : (balanceBig || 0))
+          console.log('Balance value (decoded):', balance, '(raw bigint):', balanceBig)
           
           if (balance > 0) {
             // Get token metadata
-            const nameResult = await keyTokenContract.getName()
-            const symbolResult = await keyTokenContract.getSymbol()
-            const supplyResult = await keyTokenContract.getTotalSupply()
-            
-            console.log('Token metadata:', { nameResult, symbolResult, supplyResult })
+            const [name, symbol, totalSupplyBig] = await Promise.all([
+              keyTokenContract.getNameDecoded(),
+              keyTokenContract.getSymbolDecoded(),
+              keyTokenContract.getTotalSupplyDecoded(),
+            ])
+            console.log('Token metadata (decoded):', { name, symbol, totalSupply: totalSupplyBig })
             
             keysData.push({
               creator: "Current Creator", // This would be the actual creator address
               balance: Number(balance),
-              tokenName: (nameResult as any)?.value || "Creator Key",
-              tokenSymbol: (symbolResult as any)?.value || "KEY",
-              totalSupply: Number((supplyResult as any)?.value || 0)
+              tokenName: (name as any) || "Creator Key",
+              tokenSymbol: (symbol as any) || "KEY",
+              totalSupply: Number(typeof totalSupplyBig === 'bigint' ? totalSupplyBig : (totalSupplyBig as any) || 0)
             })
           } else {
             console.log('No keys found for address:', address)
