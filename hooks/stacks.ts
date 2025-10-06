@@ -6,7 +6,7 @@ export const userSession = new UserSession({ appConfig });
 
 export const network = (() => {
   const env = process.env.NEXT_PUBLIC_STACKS_NETWORK?.toLowerCase();
-  const apiUrl = process.env.NEXT_PUBLIC_STACKS_API_URL || 'http://localhost:20443';
+  const apiUrl = process.env.NEXT_PUBLIC_STACKS_API_URL || 'https://api.testnet.hiro.so';
 
   if (env === 'mainnet') return STACKS_MAINNET;
   if (env === 'testnet') return STACKS_TESTNET;
@@ -42,7 +42,7 @@ export function getSenderAddress(): string | undefined {
   return undefined;
 }
 
-export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM';
+export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4';
 export const FACTORY_NAME = process.env.NEXT_PUBLIC_FACTORY_NAME || 'Factory';
 export const KEYTOKEN_NAME = process.env.NEXT_PUBLIC_KEYTOKEN_NAME || 'KeyToken';
 export const VENDING_NAME = process.env.NEXT_PUBLIC_VENDING_NAME || 'KeyVendingMachine';

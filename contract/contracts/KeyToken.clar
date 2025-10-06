@@ -48,6 +48,11 @@
   (ok (var-get token-uri))
 )
 
+;; Diagnostic helper to verify which principal is authorized to mint/burn
+(define-read-only (get-authorized-minter)
+  (var-get authorized-minter)
+)
+
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
   (begin
     (asserts! (or (is-eq tx-sender sender) (is-eq contract-caller sender)) err-not-authorized)
@@ -108,7 +113,7 @@
 (define-public (mint (amount uint) (recipient principal))
   (let ((minter (var-get authorized-minter)))
     (asserts! (is-some minter) err-not-authorized)
-    (asserts! (is-eq tx-sender (unwrap-panic minter)) err-not-authorized)
+    (asserts! (or (is-eq tx-sender (unwrap-panic minter)) (is-eq contract-caller (unwrap-panic minter))) err-not-authorized)
     (asserts! (> amount u0) err-invalid-amount)
     
     (let (
@@ -132,7 +137,7 @@
 (define-public (burn (amount uint) (owner principal))
   (let ((minter (var-get authorized-minter)))
     (asserts! (is-some minter) err-not-authorized)
-    (asserts! (is-eq tx-sender (unwrap-panic minter)) err-not-authorized)
+    (asserts! (or (is-eq tx-sender (unwrap-panic minter)) (is-eq contract-caller (unwrap-panic minter))) err-not-authorized)
     (asserts! (> amount u0) err-invalid-amount)
     
     (let (

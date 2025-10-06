@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
-import { getSenderAddress, authenticate } from "@/hooks/stacks"
+import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContract"
+import { getSenderAddress, authenticate, CONTRACT_ADDRESS, KEYTOKEN_NAME } from "@/hooks/stacks"
 import { Key, Wallet, TrendingUp, Users, RefreshCw, ExternalLink } from "lucide-react"
 
 interface KeyData {
@@ -25,8 +26,32 @@ export default function KeysPage() {
   const [error, setError] = useState<string | null>(null)
   const [userAddress, setUserAddress] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [initLoading, setInitLoading] = useState(false)
+  const [initError, setInitError] = useState<string | null>(null)
+  const [initSuccess, setInitSuccess] = useState<string | null>(null)
   
   const keyTokenContract = useKeyTokenContract()
+  const vending = useKeyVendingMachineContract()
+
+  const handleInitializeContracts = async () => {
+    try {
+      setInitLoading(true)
+      setInitError(null)
+      setInitSuccess(null)
+      const sender = getSenderAddress()
+      if (!sender) {
+        setError("Please connect your wallet to initialize contracts")
+        return
+      }
+      await vending.initialize(CONTRACT_ADDRESS, sender, CONTRACT_ADDRESS, KEYTOKEN_NAME)
+      setInitSuccess("Contracts initialized. Please confirm in wallet, then refresh.")
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      setInitError(message || "Initialization failed")
+    } finally {
+      setInitLoading(false)
+    }
+  }
 
   const loadUserKeys = async (isRefresh = false) => {
     try {
@@ -297,6 +322,27 @@ export default function KeysPage() {
               <Button onClick={() => window.location.href = '/marketplace/primary'}>
                 Browse Creators
               </Button>
+              {userAddress && (
+                <div className="pt-2">
+                  {initError && (
+                    <div className="text-xs text-red-600 mb-2">{initError}</div>
+                  )}
+                  {initSuccess && (
+                    <div className="text-xs text-green-600 mb-2">{initSuccess}</div>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={handleInitializeContracts}
+                    disabled={initLoading}
+                    className="mt-1"
+                  >
+                    {initLoading ? 'Initializing…' : 'Initialize Contracts'}
+                  </Button>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    This links the vending machine to the token contract ({CONTRACT_ADDRESS}.{KEYTOKEN_NAME}).
+                  </div>
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
                 If you just bought keys, they may take a moment to appear. Try refreshing the page.
               </p>

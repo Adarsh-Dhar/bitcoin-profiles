@@ -1,5 +1,5 @@
 import { openContractCall } from '@stacks/connect';
-import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, cvToJSON, ClarityValue } from '@stacks/transactions';
+import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, contractPrincipalCV, cvToJSON, ClarityValue } from '@stacks/transactions';
 import { CONTRACT_ADDRESS, VENDING_NAME, network, getSenderAddress } from './stacks';
 
 export function useKeyVendingMachineContract() {
@@ -57,8 +57,12 @@ export function useKeyVendingMachineContract() {
 
   return {
     // init/admin
-    initialize: (creator: string, treasury: string, tokenContract: string) =>
-      call('initialize', [standardPrincipalCV(creator), standardPrincipalCV(treasury), standardPrincipalCV(tokenContract)]),
+    initialize: (creator: string, treasury: string, tokenContractAddress: string, tokenContractName: string) =>
+      call('initialize', [
+        standardPrincipalCV(creator),
+        standardPrincipalCV(treasury),
+        contractPrincipalCV(tokenContractAddress, tokenContractName),
+      ]),
     setProtocolTreasury: (treasury: string) => call('set-protocol-treasury', [standardPrincipalCV(treasury)]),
 
     // pricing read-onlys (decoded to plain JSON values)

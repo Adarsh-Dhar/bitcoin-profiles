@@ -1,5 +1,5 @@
 import { openContractCall } from '@stacks/connect';
-import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, stringAsciiCV, stringUtf8CV, noneCV, someCV, bufferCV } from '@stacks/transactions';
+import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, contractPrincipalCV, stringAsciiCV, stringUtf8CV, noneCV, someCV, bufferCV, cvToJSON, ClarityValue } from '@stacks/transactions';
 import { CONTRACT_ADDRESS, KEYTOKEN_NAME, network, getSenderAddress } from './stacks';
 
 export function useKeyTokenContract() {
@@ -29,6 +29,12 @@ export function useKeyTokenContract() {
     });
   };
 
+  const roDecoded = async (functionName: string, functionArgs: any[] = []) => {
+    const cv: ClarityValue = await ro(functionName, functionArgs);
+    const json = cvToJSON(cv);
+    return json?.value as any;
+  };
+
   return {
     // SIP-010 read-onlys
     getName: () => ro('get-name'),
@@ -37,6 +43,8 @@ export function useKeyTokenContract() {
     getTotalSupply: () => ro('get-total-supply'),
     getTokenUri: () => ro('get-token-uri'),
     getBalance: (account: string) => ro('get-balance', [standardPrincipalCV(account)]),
+    getAuthorizedMinter: () => ro('get-authorized-minter'),
+    getAuthorizedMinterDecoded: () => roDecoded('get-authorized-minter'),
 
     // transfers
     transfer: (amount: number, sender: string, recipient: string, memo?: Uint8Array) =>
@@ -50,7 +58,11 @@ export function useKeyTokenContract() {
     // admin
     setTokenMetadata: (name: string, symbol: string, uri?: string) =>
       call('set-token-metadata', [stringAsciiCV(name), stringAsciiCV(symbol), uri ? someCV(stringUtf8CV(uri)) : noneCV()]),
+    // Set minter as a standard principal (use only if minter is a user address)
     setAuthorizedMinter: (minter: string) => call('set-authorized-minter', [standardPrincipalCV(minter)]),
+    // Set minter as a contract principal (use for KeyVendingMachine)
+    setAuthorizedMinterContract: (address: string, name: string) =>
+      call('set-authorized-minter', [contractPrincipalCV(address, name)]),
 
     // minter-only
     mint: (amount: number, recipient: string) => call('mint', [uintCV(amount), standardPrincipalCV(recipient)]),
