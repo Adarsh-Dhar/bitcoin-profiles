@@ -1,0 +1,360 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
+import { getSenderAddress, authenticate } from "@/hooks/stacks"
+import { Key, Wallet, TrendingUp, Users, RefreshCw, ExternalLink } from "lucide-react"
+
+interface KeyData {
+  creator: string
+  balance: number
+  tokenName: string
+  tokenSymbol: string
+  totalSupply: number
+  price?: number
+}
+
+export default function KeysPage() {
+  const [keys, setKeys] = useState<KeyData[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [userAddress, setUserAddress] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
+  
+  const keyTokenContract = useKeyTokenContract()
+
+  const loadUserKeys = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true)
+      } else {
+        setLoading(true)
+      }
+      setError(null)
+      
+      const address = getSenderAddress()
+      if (!address) {
+        setError("Please connect your wallet to view your keys")
+        setKeys([]) // Clear any existing keys
+        if (isRefresh) {
+          setRefreshing(false)
+        } else {
+          setLoading(false)
+        }
+        return
+      }
+      
+      setUserAddress(address)
+      
+      // Try to fetch real data from the blockchain
+      const keysData: KeyData[] = []
+      
+      try {
+        // Add a timeout to prevent hanging requests
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Request timeout')), 10000)
+        )
+        
+        const contractPromise = (async () => {
+          console.log('Checking keys for address:', address)
+          console.log('Using contract:', process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, process.env.NEXT_PUBLIC_KEYTOKEN_NAME)
+          
+          // Get balance for the current key token contract
+          const balanceResult = await keyTokenContract.getBalance(address)
+          const balance = (balanceResult as any)?.value || 0
+          
+          console.log('Balance result:', balanceResult)
+          console.log('Balance value:', balance)
+          
+          if (balance > 0) {
+            // Get token metadata
+            const nameResult = await keyTokenContract.getName()
+            const symbolResult = await keyTokenContract.getSymbol()
+            const supplyResult = await keyTokenContract.getTotalSupply()
+            
+            console.log('Token metadata:', { nameResult, symbolResult, supplyResult })
+            
+            keysData.push({
+              creator: "Current Creator", // This would be the actual creator address
+              balance: Number(balance),
+              tokenName: (nameResult as any)?.value || "Creator Key",
+              tokenSymbol: (symbolResult as any)?.value || "KEY",
+              totalSupply: Number((supplyResult as any)?.value || 0)
+            })
+          } else {
+            console.log('No keys found for address:', address)
+            console.log('This might be because:')
+            console.log('1. Keys were bought from KeyVendingMachine but KeyToken contract is not initialized')
+            console.log('2. Different contract addresses are being used')
+            console.log('3. The KeyVendingMachine is not properly minting to the KeyToken contract')
+          }
+        })()
+        
+        await Promise.race([contractPromise, timeoutPromise])
+      } catch (err) {
+        console.warn(`Failed to load keys from contract:`, err)
+        // Don't set error for network issues, just show empty state
+        // This prevents continuous retries and rate limiting
+        if (err instanceof Error && err.message === 'Request timeout') {
+          console.log("Request timed out - showing empty state")
+        } else {
+          console.log("Network error - showing empty state")
+        }
+      }
+      
+      setKeys(keysData)
+    } catch (err) {
+      console.error("Failed to load user keys:", err)
+      setKeys([]) // Clear keys on error
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false)
+      } else {
+        setLoading(false)
+      }
+    }
+  }
+
+  useEffect(() => {
+    // Only load keys if wallet is connected
+    const address = getSenderAddress()
+    if (address) {
+      loadUserKeys()
+    } else {
+      setLoading(false)
+      setError("Please connect your wallet to view your keys")
+      setKeys([])
+    }
+  }, []) // Empty dependency array to prevent continuous re-renders
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-4 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <Key className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold">My Keys</h1>
+          </div>
+          <p className="text-muted-foreground">
+            View and manage your creator keys across all profiles
+          </p>
+        </div>
+        
+        <Alert variant="destructive">
+          <AlertDescription className="flex items-center justify-between">
+            <span>{error}</span>
+            {error.includes("connect your wallet") ? (
+              <Button
+                onClick={authenticate}
+                size="sm"
+              >
+                Connect Wallet
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => loadUserKeys(true)}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Retry
+              </Button>
+            )}
+          </AlertDescription>
+        </Alert>
+        
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <Key className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold">My Keys</h1>
+        </div>
+        <p className="text-muted-foreground">
+          View and manage your creator keys across all profiles
+        </p>
+        {userAddress && (
+          <div className="mt-4 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Wallet className="h-4 w-4" />
+              <span className="font-mono">{userAddress}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const address = getSenderAddress()
+                if (address) {
+                  loadUserKeys(true)
+                } else {
+                  authenticate()
+                }
+              }}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {getSenderAddress() ? 'Refresh' : 'Connect Wallet'}
+            </Button>
+          </div>
+        )}
+      </div>
+
+
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-3 mb-8">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Key className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Total Keys</p>
+                <p className="text-2xl font-bold">
+                  {keys.reduce((sum, key) => sum + key.balance, 0)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Holdings</p>
+                <p className="text-2xl font-bold">{keys.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Users className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Creators</p>
+                <p className="text-2xl font-bold">{keys.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Keys List */}
+      {keys.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Keys Found</h3>
+            <p className="text-muted-foreground mb-4">
+              You don't have any creator keys yet. Start by purchasing keys from your favorite creators!
+            </p>
+            <div className="space-y-2">
+              <Button onClick={() => window.location.href = '/marketplace/primary'}>
+                Browse Creators
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                If you just bought keys, they may take a moment to appear. Try refreshing the page.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {keys.map((key, index) => (
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{key.tokenName}</CardTitle>
+                  <Badge variant="secondary">{key.tokenSymbol}</Badge>
+                </div>
+                <p className="text-sm text-muted-foreground font-mono">
+                  {key.creator}
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Your Balance</span>
+                    <span className="text-2xl font-bold">{key.balance.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Total Supply</span>
+                    <span className="font-semibold">{key.totalSupply.toLocaleString()}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Your Share</span>
+                    <span className="font-semibold">
+                      {key.totalSupply > 0 
+                        ? ((key.balance / key.totalSupply) * 100).toFixed(2) + '%'
+                        : '0%'
+                      }
+                    </span>
+                  </div>
+                  
+                  <div className="pt-3 border-t">
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1">
+                        Trade
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1">
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        View Profile
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
