@@ -1,7 +1,7 @@
 import { useFactoryContract } from './useFactoryContract';
 import { useKeyVendingMachineContract } from './useKeyVendingMachineContract';
 import { useDynamicKeyTokenContract } from './useDynamicKeyTokenContract';
-import { getSenderAddress } from './stacks';
+import { getSenderAddress, network } from './stacks';
 import { toast } from 'sonner';
 
 interface MarketData {
@@ -118,6 +118,44 @@ export function useMarketOperations() {
       // Add 2% slippage buffer for price protection
       const maxPrice = (price * BigInt(102)) / BigInt(100);
       console.log(`Price with 2% slippage buffer: ${maxPrice} microSTX`);
+
+      // Step 2.5: Ensure caller has enough STX balance to cover maxPrice + fee buffer
+      const apiBase = (network as any)?.coreApiUrl || (network as any)?.url || 'https://api.testnet.hiro.so';
+      const base = apiBase.replace(/\/$/, '');
+      const endpoints = [
+        `${base}/extended/v1/address/${sender}/balances`,
+        `${base}/v2/accounts/${sender}?proof=0`,
+      ];
+      try {
+        const [r1, r2] = await Promise.all(
+          endpoints.map((u) => fetch(u).catch(() => new Response(null, { status: 599 } as any)))
+        );
+        let bal1 = BigInt(0);
+        if (r1 && r1.ok) {
+          const j = await r1.json();
+          const s = j?.stx?.balance as string | undefined;
+          if (s && /^\d+$/.test(s)) bal1 = BigInt(s);
+        }
+        let bal2 = BigInt(0);
+        if (r2 && r2.ok) {
+          const j = await r2.json();
+          const s = (j?.balance as string | undefined) || (j?.stx?.balance as string | undefined);
+          if (s && /^\d+$/.test(s)) bal2 = BigInt(s);
+        }
+        const stxBalance = bal1 > bal2 ? bal1 : bal2;
+        // Use a conservative network fee buffer (0.1 STX)
+        const required = maxPrice + BigInt(100_000);
+        if (stxBalance < required) {
+          const toStx = (v: bigint) => (Number(v) / 1_000_000).toFixed(6);
+          throw new Error(
+            `Insufficient STX balance. Required ~${toStx(required)} STX, available ${toStx(stxBalance)} STX.`
+          );
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error('Preflight STX balance check failed:', msg);
+        throw new Error(msg || 'Failed STX balance preflight');
+      }
 
       // Step 3: Execute the purchase
       console.log('Step 3: Executing purchase...');
