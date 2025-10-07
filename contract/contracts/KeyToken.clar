@@ -21,8 +21,7 @@
 (define-public (set-authorized-minter (minter principal))
     (begin
         (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-        ;; Validate minter is not zero address
-        (asserts! (is-eq minter tx-sender) err-unauthorized)
+        ;; Set the vending machine or any designated contract/user as the authorized minter
         (ok (var-set authorized-minter (some minter)))
     )
 )

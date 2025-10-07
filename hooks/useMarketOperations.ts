@@ -67,8 +67,8 @@ export function useMarketOperations() {
         throw new Error(`Invalid vending machine contract identifier: ${vendingMachine}`);
       }
 
-      // Create vending machine contract instance
-      const vendingContract = useKeyVendingMachineContract();
+      // Create vending machine contract instance for the specific market
+      const vendingContract = useKeyVendingMachineContract(vendingMachine);
       
       // Calculate the buy price
       const price = await vendingContract.calculateBuyPriceDecoded(amount);
@@ -128,8 +128,8 @@ export function useMarketOperations() {
         throw new Error(`Invalid vending machine contract identifier: ${market.vendingMachine}`);
       }
 
-      // Create vending machine contract instance
-      const vendingContract = useKeyVendingMachineContract();
+      // Create vending machine contract instance for the specific market
+      const vendingContract = useKeyVendingMachineContract(market.vendingMachine);
       
       // Execute the buy transaction
       await vendingContract.buyKeys(amount, maxPrice);

@@ -109,7 +109,7 @@
 ;; Helper to get token supply - returns 0 if no token contract is set
 (define-private (get-token-supply)
     (match (var-get key-token-contract)
-        token-addr (unwrap! (contract-call? .KeyToken get-total-supply) u0)
+        token-addr (unwrap! (contract-call? token-addr get-total-supply) u0)
         u0
     )
 )
@@ -133,15 +133,15 @@
         ;; This is simplified - you'd use stx-transfer? or sBTC token transfer
         (try! (stx-transfer? total-price tx-sender (as-contract tx-sender)))
         
-        ;; Distribute fees
-        (try! (as-contract (stx-transfer? protocol-fee tx-sender (var-get protocol-treasury))))
-        (try! (as-contract (stx-transfer? creator-fee tx-sender (var-get creator-address))))
+        ;; Distribute fees from contract balance (not from the user)
+        (try! (as-contract (stx-transfer? protocol-fee (as-contract tx-sender) (var-get protocol-treasury))))
+        (try! (as-contract (stx-transfer? creator-fee (as-contract tx-sender) (var-get creator-address))))
         
         ;; Add to treasury
         (var-set treasury-balance (+ (var-get treasury-balance) treasury-amount))
         
-        ;; Mint keys to buyer
-        (try! (as-contract (contract-call? .KeyToken mint amount tx-sender)))
+        ;; Mint keys to buyer on configured token contract
+        (try! (as-contract (contract-call? token-addr mint amount tx-sender)))
         
         (ok true)
     )
@@ -161,17 +161,17 @@
         (asserts! (>= total-price min-price) err-insufficient-payment)
         (asserts! (>= (var-get treasury-balance) payout) err-insufficient-balance)
         
-        ;; Burn keys from seller
-        (try! (as-contract (contract-call? .KeyToken burn amount tx-sender)))
+        ;; Burn keys from seller on configured token contract
+        (try! (as-contract (contract-call? token-addr burn amount tx-sender)))
         
         ;; Deduct from treasury
         (var-set treasury-balance (- (var-get treasury-balance) payout))
         
-        ;; Pay seller
-        (try! (as-contract (stx-transfer? payout tx-sender tx-sender)))
+        ;; Pay seller from contract balance
+        (try! (as-contract (stx-transfer? payout (as-contract tx-sender) tx-sender)))
         
-        ;; Pay protocol fee
-        (as-contract (stx-transfer? protocol-fee tx-sender (var-get protocol-treasury)))
+        ;; Pay protocol fee from contract balance
+        (as-contract (stx-transfer? protocol-fee (as-contract tx-sender) (var-get protocol-treasury)))
     )
 )
 

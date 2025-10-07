@@ -2,13 +2,25 @@ import { openContractCall } from '@stacks/connect';
 import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, stringAsciiCV, cvToJSON, ClarityValue } from '@stacks/transactions';
 import { CONTRACT_ADDRESS, VENDING_NAME, network, getSenderAddress } from './stacks';
 
-export function useKeyVendingMachineContract() {
+export function useKeyVendingMachineContract(contractId?: string) {
+  // Determine target contract address/name. If contractId provided as "SP...Name", use it; otherwise fallback to constants
+  const getTarget = () => {
+    if (contractId && typeof contractId === 'string') {
+      const [addr, name] = contractId.split('.');
+      if (addr && name) {
+        return { address: addr, name };
+      }
+    }
+    return { address: CONTRACT_ADDRESS, name: VENDING_NAME };
+  };
+
   const call = async (functionName: string, functionArgs: any[]) => {
     const senderAddress = getSenderAddress();
     if (!senderAddress) throw new Error('Wallet not connected');
+    const target = getTarget();
     await openContractCall({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: VENDING_NAME,
+      contractAddress: target.address,
+      contractName: target.name,
       functionName,
       functionArgs,
       network,
@@ -19,9 +31,10 @@ export function useKeyVendingMachineContract() {
 
   const ro = async (functionName: string, functionArgs: any[] = []) => {
     const senderAddress = getSenderAddress();
+    const target = getTarget();
     return fetchCallReadOnlyFunction({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: VENDING_NAME,
+      contractAddress: target.address,
+      contractName: target.name,
       functionName,
       functionArgs,
       network,
@@ -65,25 +78,51 @@ export function useKeyVendingMachineContract() {
 
   return {
     // init/admin
-    initialize: (roomId: string, creator: string, tokenContract: string) =>
-      call('initialize', [
+    initialize: (roomId: string, creator: string, tokenContractId: string) => {
+      const [tokenAddr, tokenName] = (tokenContractId || '').split('.');
+      if (!tokenAddr || !tokenName) throw new Error(`Invalid token contract id: ${tokenContractId}`);
+      return call('initialize', [
         stringAsciiCV(roomId),
         standardPrincipalCV(creator),
-        standardPrincipalCV(tokenContract),
-      ]),
+        // must be a contract principal for the token contract
+        contractPrincipalCV(tokenAddr, tokenName),
+      ]);
+    },
     setProtocolTreasury: (treasury: string) => call('set-protocol-treasury', [standardPrincipalCV(treasury)]),
 
     // pricing read-onlys (decoded to plain JSON values)
     calculateBuyPrice: (amount: number | bigint) => roDecoded('calculate-buy-price', [uintCV(amount as any)]),
     calculateSellPrice: (amount: number | bigint) => roDecoded('calculate-sell-price', [uintCV(amount as any)]),
-    getTokenSupply: () => roDecoded('get-token-supply'),
+    // Note: contract exports get-token-supply-public; keep a stable API here
+    getTokenSupply: () => roDecoded('get-token-supply-public'),
     getMarketInfo: () => roDecoded('get-market-info'),
 
     // decoded helpers
     calculateBuyPriceDecoded: async (amount: number | bigint) => {
-      const v = await roDecoded('calculate-buy-price', [uintCV(amount as any)]);
-      const n = extractUint(v);
-      return n ?? BigInt(0);
+      const target = getTarget();
+      try {
+        const v = await roDecoded('calculate-buy-price', [uintCV(amount as any)]);
+        const n = extractUint(v);
+        return n ?? BigInt(0);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        // Compatibility fallback: try legacy function names if calculate-buy-price is missing
+        if (message && message.includes('UndefinedFunction')) {
+          try {
+            const v1 = await roDecoded('get-buy-price', [uintCV(amount as any)]);
+            const n1 = extractUint(v1);
+            if (n1 !== undefined) return n1;
+          } catch {}
+          try {
+            const v2 = await roDecoded('price-to-buy', [uintCV(amount as any)]);
+            const n2 = extractUint(v2);
+            if (n2 !== undefined) return n2;
+          } catch {}
+        }
+        throw new Error(
+          `calculate-buy-price not found on ${target.address}.${target.name}. Please deploy/update vending machine with pricing read-only or register the correct contract. Original error: ${message}`
+        );
+      }
     },
     calculateSellPriceDecoded: async (amount: number | bigint) => {
       const v = await roDecoded('calculate-sell-price', [uintCV(amount as any)]);
@@ -91,7 +130,7 @@ export function useKeyVendingMachineContract() {
       return n ?? BigInt(0);
     },
     getTokenSupplyDecoded: async () => {
-      const v = await roDecoded('get-token-supply');
+      const v = await roDecoded('get-token-supply-public');
       const n = extractUint(v);
       return n ?? BigInt(0);
     },

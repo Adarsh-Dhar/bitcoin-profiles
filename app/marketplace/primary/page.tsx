@@ -12,6 +12,7 @@ import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContra
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
 import { useMarketOperations } from "@/hooks/useMarketOperations"
 import { CONTRACT_ADDRESS, VENDING_NAME, getSenderAddress } from "@/hooks/stacks"
+import { useFactoryContract } from "@/hooks/useFactoryContract"
 
 interface User {
   id: string
@@ -51,6 +52,8 @@ export default function PrimaryMarketplacePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isBuying, setIsBuying] = useState(false)
   const [isSettingMinter, setIsSettingMinter] = useState(false)
+  const [isUnregistering, setIsUnregistering] = useState(false)
+  const [unregisteringRoomId, setUnregisteringRoomId] = useState<string | null>(null)
   const [buyingRoomId, setBuyingRoomId] = useState<string | null>(null)
   const [marketInfo, setMarketInfo] = useState<Record<string, any>>({})
   const [loadingMarketInfo, setLoadingMarketInfo] = useState<Record<string, boolean>>({})
@@ -58,6 +61,7 @@ export default function PrimaryMarketplacePage() {
   const { buyKeys } = useKeyVendingMachineContract()
   const token = useKeyTokenContract()
   const { buyKeysWithFullProcess, getMarketInfo } = useMarketOperations()
+  const factory = useFactoryContract()
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -154,6 +158,43 @@ export default function PrimaryMarketplacePage() {
     } finally {
       setIsBuying(false)
       setBuyingRoomId(null)
+    }
+  }
+
+  const handleUnregisterMarket = async (roomId: string | number) => {
+    try {
+      const roomIdStr = String(roomId)
+      const sender = getSenderAddress()
+      if (!sender) {
+        toast.error("Please connect your wallet")
+        return
+      }
+      if (sender !== CONTRACT_ADDRESS) {
+        toast.error("Owner-only action: connect with deployer wallet")
+        return
+      }
+
+      if (!window.confirm("Are you sure you want to unregister this market?")) {
+        return
+      }
+
+      setUnregisteringRoomId(roomIdStr)
+      setIsUnregistering(true)
+      toast.message("Unregistering market… confirm in wallet")
+      await factory.unregisterMarket(roomIdStr)
+      // Clear cached market info for this room
+      setMarketInfo(prev => {
+        const next = { ...prev }
+        delete next[roomIdStr]
+        return next
+      })
+      toast.success("Market unregistered")
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      toast.error(msg || "Failed to unregister market")
+    } finally {
+      setIsUnregistering(false)
+      setUnregisteringRoomId(null)
     }
   }
 
@@ -256,24 +297,49 @@ export default function PrimaryMarketplacePage() {
                   <MessageCircle className="h-4 w-4" />
                   Enter
                 </Button>
-                <Button 
-                  onClick={() => handleBuyOneKey(room.id)} 
-                  className="gap-2" 
-                  disabled={isBuying}
-                  variant={buyingRoomId === room.id ? "default" : "default"}
-                >
-                  {isBuying && buyingRoomId === room.id ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Buying...
-                    </>
-                  ) : (
-                    <>
-                      Buy 1 key
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const sender = getSenderAddress()
+                    const isOwner = sender && sender === CONTRACT_ADDRESS
+                    if (!isOwner) return null
+                    return (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleUnregisterMarket(room.id)}
+                        disabled={isUnregistering && unregisteringRoomId === room.id}
+                        className="gap-2"
+                      >
+                        {isUnregistering && unregisteringRoomId === room.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Unregistering…
+                          </>
+                        ) : (
+                          <>Unregister</>
+                        )}
+                      </Button>
+                    )
+                  })()}
+                  <Button 
+                    onClick={() => handleBuyOneKey(room.id)} 
+                    className="gap-2" 
+                    disabled={isBuying}
+                    variant={buyingRoomId === room.id ? "default" : "default"}
+                  >
+                    {isBuying && buyingRoomId === room.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Buying...
+                      </>
+                    ) : (
+                      <>
+                        Buy 1 key
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
