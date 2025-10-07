@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { CONTRACT_ADDRESS, VENDING_NAME, KEYTOKEN_TEMPLATE_NAME } from '@/hooks/stacks'
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +67,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    return NextResponse.json({ chatRoom }, { status: 201 })
+    // Register market with Factory contract
+    const marketRegistrationData = {
+      chatRoomId: chatRoom.id,
+      vendingMachine: `${CONTRACT_ADDRESS}.${VENDING_NAME}`,
+      tokenContract: `${CONTRACT_ADDRESS}.${KEYTOKEN_TEMPLATE_NAME}`,
+      creator: user.walletAddress
+    }
+
+    return NextResponse.json({ 
+      chatRoom, 
+      marketRegistrationData 
+    }, { status: 201 })
   } catch (error) {
     console.error('Error creating chat room:', error)
     return NextResponse.json(

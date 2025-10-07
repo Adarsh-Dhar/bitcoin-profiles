@@ -5,14 +5,15 @@ authors = []
 telemetry = true
 cache_dir = "./.cache"
 
-[contracts.KeyToken]
-path = "contracts/KeyToken.clar"
 
 [contracts.Factory]
 path = "contracts/Factory.clar"
 
 [contracts.KeyVendingMachine]
 path = "contracts/KeyVendingMachine.clar"
+
+[contracts.KeyToken]
+path = "contracts/KeyToken.clar"
 
 [repl.analysis]
 passes = ["check_checker"]

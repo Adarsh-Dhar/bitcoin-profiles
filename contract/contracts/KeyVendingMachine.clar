@@ -1,214 +1,152 @@
-;; KeyVendingMachine Contract - Bonding Curve AMM
-;; Handles buying and selling of keys for a single creator
+;; KeyVendingMachine Contract - Market Logic with Bonding Curve
 
 ;; Constants
 (define-constant contract-owner tx-sender)
-(define-constant err-not-authorized (err u200))
-(define-constant err-invalid-amount (err u201))
-(define-constant err-insufficient-payment (err u202))
-(define-constant err-insufficient-balance (err u203))
-(define-constant err-transfer-failed (err u204))
-(define-constant err-mint-failed (err u205))
-(define-constant err-burn-failed (err u206))
+(define-constant err-owner-only (err u200))
+(define-constant err-insufficient-payment (err u201))
+(define-constant err-insufficient-balance (err u202))
+(define-constant err-zero-amount (err u203))
+(define-constant err-token-not-set (err u204))
 
-;; Trait for sBTC contract interactions
-(define-trait sbtc-trait
-  (
-    (transfer (uint principal principal (optional (buff 34))) (response bool uint))
-    (get-balance (principal) (response uint uint))
-  )
-)
-
-;; Note: token contract is called dynamically using its principal
-
-;; Fee constants (in basis points, 250 = 2.5%)
-(define-constant creator-fee-bps u250)
+;; Protocol fee: 2.5% (250 basis points)
 (define-constant protocol-fee-bps u250)
-(define-constant total-fee-bps u500) ;; 5% total
-
-;; Bonding curve constants (linear curve: price = base-price + (supply * slope))
-(define-constant base-price u1000000) ;; 0.01 sBTC in satoshis (1 sBTC = 100,000,000 sats)
-(define-constant price-slope u10000) ;; Price increases by 0.0001 sBTC per key
+;; Creator fee: 2.5% (250 basis points)
+(define-constant creator-fee-bps u250)
+(define-constant basis-points u10000)
 
 ;; Data Variables
+(define-data-var chat-room-id (string-ascii 256) "")
 (define-data-var creator-address principal tx-sender)
+(define-data-var key-token-contract (optional principal) none)
 (define-data-var protocol-treasury principal tx-sender)
-(define-data-var key-token-contract principal tx-sender)
-(define-data-var sbtc-contract principal 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.token-sbtc) ;; Replace with actual sBTC contract
 
-;; Initialize function (called once after deployment)
-(define-public (initialize (creator principal) (treasury principal) (token-contract principal))
-  (begin
-    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
-    (var-set creator-address creator)
-    (var-set protocol-treasury treasury)
-    (var-set key-token-contract token-contract)
-    (ok true)
-  )
-)
+;; Treasury balance (sBTC held for liquidity)
+(define-data-var treasury-balance uint u0)
 
-;; Pricing helpers
-
-(define-read-only (get-current-supply)
-  (let ()
-    (unwrap-panic (contract-call? (var-get key-token-contract) get-total-supply))
-  )
-)
-
-(define-read-only (calculate-price-at-supply (supply uint))
-  (+ base-price (* supply price-slope))
-)
-
-(define-read-only (get-buy-price (amount uint))
-  (let (
-    (current-supply (get-current-supply))
-    (new-supply (+ current-supply amount))
-  )
-    ;; Sum of arithmetic series: cost = amount * (price-at-start + price-at-end) / 2
-    (let (
-      (start-price (calculate-price-at-supply current-supply))
-      (end-price (calculate-price-at-supply (- new-supply u1)))
-      (avg-price (/ (+ start-price end-price) u2))
-      (total-cost (* amount avg-price))
+;; Configuration
+(define-public (initialize (room-id (string-ascii 256)) (creator principal) (token-contract principal))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        (var-set chat-room-id room-id)
+        (var-set creator-address creator)
+        (var-set key-token-contract (some token-contract))
+        (ok true)
     )
-      {
-        total-cost: total-cost,
-        creator-fee: (/ (* total-cost creator-fee-bps) u10000),
-        protocol-fee: (/ (* total-cost protocol-fee-bps) u10000),
-        net-cost: total-cost
-      }
-    )
-  )
 )
 
-(define-read-only (get-sell-price (amount uint))
-  (let (
-    (current-supply (get-current-supply))
-  )
-    (asserts! (>= current-supply amount) (ok { total-payout: u0, creator-fee: u0, protocol-fee: u0, net-payout: u0 }))
-    
-    (let (
-      (new-supply (- current-supply amount))
-      (start-price (calculate-price-at-supply (- current-supply u1)))
-      (end-price (calculate-price-at-supply new-supply))
-      (avg-price (/ (+ start-price end-price) u2))
-      (gross-payout (* amount avg-price))
-      (creator-fee (/ (* gross-payout creator-fee-bps) u10000))
-      (protocol-fee (/ (* gross-payout protocol-fee-bps) u10000))
-      (net-payout (- gross-payout (+ creator-fee protocol-fee)))
+(define-public (set-protocol-treasury (treasury principal))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        (ok (var-set protocol-treasury treasury))
     )
-      (ok {
-        total-payout: gross-payout,
-        creator-fee: creator-fee,
-        protocol-fee: protocol-fee,
-        net-payout: net-payout
-      })
-    )
-  )
 )
 
-;; Buy keys function
+;; Bonding Curve: Simple linear formula
+;; Price = base-price + (supply * price-increment)
+;; For simplicity: price = 1000000 + (supply * 100000) microSTX per key
+(define-read-only (calculate-buy-price (amount uint))
+    (let
+        (
+            (current-supply (get-token-supply))
+            (base-price u1000000) ;; 1 sBTC (in micro units)
+            (price-increment u100000) ;; 0.1 sBTC per key
+        )
+        ;; Sum of prices for each key: sum from i=0 to amount-1 of (base + (supply+i)*increment)
+        (ok (+ (* amount base-price) 
+               (* price-increment (+ (* amount current-supply) (/ (* amount (- amount u1)) u2)))))
+    )
+)
+
+(define-read-only (calculate-sell-price (amount uint))
+    (let
+        (
+            (current-supply (get-token-supply))
+            (base-price u1000000)
+            (price-increment u100000)
+            (new-supply (- current-supply amount))
+        )
+        ;; Sum of prices for each key being sold
+        (ok (+ (* amount base-price)
+               (* price-increment (+ (* amount new-supply) (/ (* amount (- amount u1)) u2)))))
+    )
+)
+
+;; Helper to get token supply
+(define-read-only (get-token-supply)
+    (match (var-get key-token-contract)
+        token-contract (match (contract-call? token-contract get-total-supply)
+            total-supply total-supply
+            u0)
+        u0
+    )
+)
+
+;; Buy Keys Function
 (define-public (buy-keys (amount uint) (max-price uint))
-  (let (
-    (buyer tx-sender)
-    (price-data (get-buy-price amount))
-    (total-cost (get total-cost price-data))
-    (creator-fee (get creator-fee price-data))
-    (protocol-fee (get protocol-fee price-data))
-  )
-    (asserts! (> amount u0) err-invalid-amount)
-    (asserts! (<= total-cost max-price) err-insufficient-payment)
-    
-    ;; Transfer sBTC from buyer to this contract
-    (unwrap! (stx-transfer-sbtc total-cost buyer (as-contract tx-sender)) err-transfer-failed)
-    
-    ;; Distribute fees (only if fees > 0)
-    (if (> creator-fee u0)
-      (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
+    (let
+        (
+            (token-contract (unwrap! (var-get key-token-contract) err-token-not-set))
+            (total-price (unwrap! (calculate-buy-price amount) err-zero-amount))
+            (protocol-fee (/ (* total-price protocol-fee-bps) basis-points))
+            (creator-fee (/ (* total-price creator-fee-bps) basis-points))
+            (treasury-amount (- total-price (+ protocol-fee creator-fee)))
+        )
+        ;; Validations
+        (asserts! (> amount u0) err-zero-amount)
+        (asserts! (<= total-price max-price) err-insufficient-payment)
+        
+        ;; Transfer sBTC from buyer
+        ;; Note: In production, use actual sBTC token contract
+        ;; This is simplified - you'd use stx-transfer? or sBTC token transfer
+        (try! (stx-transfer? total-price tx-sender (as-contract tx-sender)))
+        
+        ;; Distribute fees
+        (try! (as-contract (stx-transfer? protocol-fee tx-sender (var-get protocol-treasury))))
+        (try! (as-contract (stx-transfer? creator-fee tx-sender (var-get creator-address))))
+        
+        ;; Add to treasury
+        (var-set treasury-balance (+ (var-get treasury-balance) treasury-amount))
+        
+        ;; Mint keys to buyer
+        (as-contract (contract-call? token-contract mint amount tx-sender))
     )
-    (if (> protocol-fee u0)
-      (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
+)
+
+;; Sell Keys Function
+(define-public (sell-keys (amount uint) (min-price uint))
+    (let
+        (
+            (token-contract (unwrap! (var-get key-token-contract) err-token-not-set))
+            (total-price (unwrap! (calculate-sell-price amount) err-zero-amount))
+            (protocol-fee (/ (* total-price protocol-fee-bps) basis-points))
+            (payout (- total-price protocol-fee))
+        )
+        ;; Validations
+        (asserts! (> amount u0) err-zero-amount)
+        (asserts! (>= total-price min-price) err-insufficient-payment)
+        (asserts! (>= (var-get treasury-balance) payout) err-insufficient-balance)
+        
+        ;; Burn keys from seller
+        (try! (as-contract (contract-call? token-contract burn amount tx-sender)))
+        
+        ;; Deduct from treasury
+        (var-set treasury-balance (- (var-get treasury-balance) payout))
+        
+        ;; Pay seller
+        (try! (as-contract (stx-transfer? payout tx-sender tx-sender)))
+        
+        ;; Pay protocol fee
+        (as-contract (stx-transfer? protocol-fee tx-sender (var-get protocol-treasury)))
     )
-    
-    ;; Mint keys to buyer
-    (let ()
-      (asserts!
-        (is-ok (as-contract (contract-call? (var-get key-token-contract) mint amount buyer)))
-        err-mint-failed
-      )
-    )
-    
-    (print {
-      type: "buy-keys",
-      buyer: buyer,
-      amount: amount,
-      total-cost: total-cost,
-      creator-fee: creator-fee,
-      protocol-fee: protocol-fee
+)
+
+;; Read-only functions
+(define-read-only (get-market-info)
+    (ok {
+        chat-room-id: (var-get chat-room-id),
+        creator: (var-get creator-address),
+        token-contract: (var-get key-token-contract),
+        treasury-balance: (var-get treasury-balance),
+        total-supply: (get-token-supply)
     })
-    
-    (ok {amount: amount, cost: total-cost})
-  )
-)
-
-;; Sell keys function
-(define-public (sell-keys (amount uint) (min-payout uint))
-  (let (
-    (seller tx-sender)
-    (price-result (unwrap! (get-sell-price amount) err-invalid-amount))
-    (gross-payout (get total-payout price-result))
-    (creator-fee (get creator-fee price-result))
-    (protocol-fee (get protocol-fee price-result))
-    (net-payout (get net-payout price-result))
-  )
-    (asserts! (> amount u0) err-invalid-amount)
-    (asserts! (>= net-payout min-payout) err-insufficient-payment)
-    
-    ;; Burn keys from seller
-    (let ()
-      (asserts!
-        (is-ok (as-contract (contract-call? (var-get key-token-contract) burn amount seller)))
-        err-burn-failed
-      )
-    )
-    
-    ;; Distribute fees (only if fees > 0)
-    (if (> creator-fee u0)
-      (unwrap! (as-contract (stx-transfer-sbtc creator-fee tx-sender (var-get creator-address))) err-transfer-failed)
-    )
-    (if (> protocol-fee u0)
-      (unwrap! (as-contract (stx-transfer-sbtc protocol-fee tx-sender (var-get protocol-treasury))) err-transfer-failed)
-    )
-    
-    ;; Pay seller
-    (unwrap! (as-contract (stx-transfer-sbtc net-payout tx-sender seller)) err-transfer-failed)
-    
-    (print {
-      type: "sell-keys",
-      seller: seller,
-      amount: amount,
-      gross-payout: gross-payout,
-      net-payout: net-payout,
-      creator-fee: creator-fee,
-      protocol-fee: protocol-fee
-    })
-    
-    (ok {amount: amount, payout: net-payout})
-  )
-)
-
-;; Helper function for sBTC transfers (simplified - you'll need to integrate with actual sBTC contract)
-(define-private (stx-transfer-sbtc (amount uint) (sender principal) (recipient principal))
-  (ok true)
-)
-
-;; Removed unused read-only balance helper to avoid disallowed constructs in read-only context
-
-;; Admin function to update protocol treasury
-(define-public (set-protocol-treasury (new-treasury principal))
-  (begin
-    (asserts! (is-eq tx-sender contract-owner) err-not-authorized)
-    (var-set protocol-treasury new-treasury)
-    (ok true)
-  )
 )

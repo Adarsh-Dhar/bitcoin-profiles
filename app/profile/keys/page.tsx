@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
 import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContract"
-import { getSenderAddress, authenticate, CONTRACT_ADDRESS, KEYTOKEN_NAME } from "@/hooks/stacks"
+import { getSenderAddress, authenticate, CONTRACT_ADDRESS, KEYTOKEN_TEMPLATE_NAME } from "@/hooks/stacks"
 import { Key, Wallet, TrendingUp, Users, RefreshCw, ExternalLink } from "lucide-react"
 
 interface KeyData {
@@ -17,6 +17,7 @@ interface KeyData {
   tokenName: string
   tokenSymbol: string
   totalSupply: number
+  chatRoomId?: number | null
   price?: number
 }
 
@@ -43,7 +44,7 @@ export default function KeysPage() {
         setError("Please connect your wallet to initialize contracts")
         return
       }
-      await vending.initialize(CONTRACT_ADDRESS, sender, CONTRACT_ADDRESS, KEYTOKEN_NAME)
+      await vending.initialize(sender, CONTRACT_ADDRESS, CONTRACT_ADDRESS, KEYTOKEN_TEMPLATE_NAME, 1)
       setInitSuccess("Contracts initialized. Please confirm in wallet, then refresh.")
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
@@ -82,12 +83,12 @@ export default function KeysPage() {
       try {
         // Add a timeout to prevent hanging requests
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Request timeout')), 10000)
+          setTimeout(() => reject(new Error('Request timeout')), 8000)
         )
         
         const contractPromise = (async () => {
           console.log('Checking keys for address:', address)
-          console.log('Using contract:', process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, process.env.NEXT_PUBLIC_KEYTOKEN_NAME)
+          console.log('Using contract:', process.env.NEXT_PUBLIC_CONTRACT_ADDRESS, process.env.NEXT_PUBLIC_KEYTOKEN_TEMPLATE_NAME)
           
           // Get balance for the current key token contract (decoded)
           const balanceBig = await keyTokenContract.getBalanceDecoded(address)
@@ -95,21 +96,70 @@ export default function KeysPage() {
           console.log('Balance value (decoded):', balance, '(raw bigint):', balanceBig)
           
           if (balance > 0) {
-            // Get token metadata
+            // Get token metadata (required) within timeout
             const [name, symbol, totalSupplyBig] = await Promise.all([
               keyTokenContract.getNameDecoded(),
               keyTokenContract.getSymbolDecoded(),
               keyTokenContract.getTotalSupplyDecoded(),
             ])
             console.log('Token metadata (decoded):', { name, symbol, totalSupply: totalSupplyBig })
-            
-            keysData.push({
+
+            // Get chat room ID for this key
+            let chatRoomId: number | null = null
+            try {
+              const holderChatRoom = await keyTokenContract.getHolderChatRoomId(address)
+              // Convert ClarityValue to number if possible
+              if (holderChatRoom && typeof holderChatRoom === 'object' && 'value' in holderChatRoom) {
+                chatRoomId = Number((holderChatRoom as any).value)
+              } else if (typeof holderChatRoom === 'number' || typeof holderChatRoom === 'bigint') {
+                chatRoomId = Number(holderChatRoom)
+              }
+              console.log(`🔑 Key Chat Room ID for ${name} (${symbol}):`, chatRoomId)
+            } catch (e) {
+              console.warn('Failed to get chat room ID for key:', e)
+            }
+
+            const keyDataWithChatRoom = {
               creator: "Current Creator", // This would be the actual creator address
               balance: Number(balance),
               tokenName: (name as any) || "Creator Key",
               tokenSymbol: (symbol as any) || "KEY",
-              totalSupply: Number(typeof totalSupplyBig === 'bigint' ? totalSupplyBig : (totalSupplyBig as any) || 0)
-            })
+              totalSupply: Number(typeof totalSupplyBig === 'bigint' ? totalSupplyBig : (totalSupplyBig as any) || 0),
+              chatRoomId: chatRoomId
+            }
+            
+            console.log('📊 Complete Key Data:', keyDataWithChatRoom)
+            keysData.push(keyDataWithChatRoom)
+
+            // Best-effort: holder metadata (do not block or fail UI)
+            ;(async () => {
+              try {
+                const holderTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('holder-timeout')), 3000))
+                const holderPromise = (async () => {
+                  const holderInfo: any = await keyTokenContract.getHolderInfoDecoded(address)
+                  const holderChatRoom = await keyTokenContract.getHolderChatRoomId(address)
+                  console.log('Holder info (decoded):', holderInfo)
+                  console.log('Holder chat-room-id (raw cv):', holderChatRoom)
+                  
+                  // Log the chat_room_id for this key
+                  console.log(`🔑 Key Chat Room ID for ${name} (${symbol}):`, holderChatRoom)
+                  
+                  console.log('Key detail:', {
+                    creator: "Current Creator",
+                    balance,
+                    tokenName: name,
+                    tokenSymbol: symbol,
+                    totalSupply: totalSupplyBig,
+                    holderInfo,
+                    holderChatRoomRaw: holderChatRoom,
+                  })
+                })()
+                await Promise.race([holderPromise, holderTimeout])
+              } catch (e) {
+                // eslint-disable-next-line no-console
+                console.warn('[holder-meta] skipped', e)
+              }
+            })()
           } else {
             console.log('No keys found for address:', address)
             console.log('This might be because:')
@@ -132,6 +182,12 @@ export default function KeysPage() {
       }
       
       setKeys(keysData)
+      
+      // Log summary of all keys and their chat_room_ids
+      console.log('🔑 All Keys Summary:')
+      keysData.forEach((key, index) => {
+        console.log(`  ${index + 1}. ${key.tokenName} (${key.tokenSymbol}) - Chat Room ID: ${key.chatRoomId}`)
+      })
     } catch (err) {
       console.error("Failed to load user keys:", err)
       setKeys([]) // Clear keys on error
@@ -338,7 +394,7 @@ export default function KeysPage() {
                     {initLoading ? 'Initializing…' : 'Initialize Contracts'}
                   </Button>
                   <div className="text-[11px] text-muted-foreground mt-1">
-                    This links the vending machine to the token contract ({CONTRACT_ADDRESS}.{KEYTOKEN_NAME}).
+                    This links the vending machine to the token contract ({CONTRACT_ADDRESS}.{KEYTOKEN_TEMPLATE_NAME}).
                   </div>
                 </div>
               )}
@@ -350,7 +406,11 @@ export default function KeysPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {keys.map((key, index) => (
+          {keys.map((key, index) => {
+            // Log chat_room_id for each key when rendering
+            console.log(`🔑 Rendering Key ${index + 1}: ${key.tokenName} (${key.tokenSymbol}) - Chat Room ID:`, key.chatRoomId)
+            
+            return (
             <Card key={index} className="hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -397,7 +457,8 @@ export default function KeysPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

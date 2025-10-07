@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, MessageCircle, Users, Lock } from 'lucide-react'
 import { toast } from 'sonner'
+import { useFactoryContract } from '@/hooks/useFactoryContract'
 
 interface CreateChatRoomDialogProps {
   isOpen: boolean
@@ -30,11 +31,13 @@ export function CreateChatRoomDialog({
   userAddress
 }: CreateChatRoomDialogProps) {
   const [isCreating, setIsCreating] = useState(false)
+  const [isRegisteringMarket, setIsRegisteringMarket] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     isPrivate: false
   })
+  const factory = useFactoryContract()
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -53,6 +56,7 @@ export function CreateChatRoomDialog({
 
     if (!userAddress) {
       toast.error('Please connect your wallet first')
+      window.location.href = '/auth'
       return
     }
 
@@ -73,11 +77,46 @@ export function CreateChatRoomDialog({
 
       if (!response.ok) {
         const errorData = await response.json()
+        
+        // If user not found, redirect to auth page
+        if (errorData.error === 'User not found') {
+          toast.error('Please create an account first')
+          window.location.href = '/auth'
+          return
+        }
+        
         throw new Error(errorData.error || 'Failed to create chat room')
       }
 
       const data = await response.json()
-      toast.success('Chat room created successfully!')
+      
+      // Register market with Factory contract
+      try {
+        setIsRegisteringMarket(true)
+        toast.info('Registering market...')
+        
+        console.log('Market registration data from API:', data.marketRegistrationData)
+        
+        await factory.registerMarket(
+          data.marketRegistrationData.chatRoomId,
+          data.marketRegistrationData.vendingMachine,
+          data.marketRegistrationData.tokenContract,
+          data.marketRegistrationData.creator
+        )
+        
+        toast.success('Chat room and market registered successfully!')
+      } catch (marketError) {
+        console.error('Error registering market:', marketError)
+        
+        // Check if it's because the contracts are already registered
+        if (marketError instanceof Error && marketError.message.includes('already-exists')) {
+          toast.warning('Chat room created! Market registration skipped (contracts already registered).')
+        } else {
+          toast.error('Chat room created but market registration failed. You may need to register manually.')
+        }
+      } finally {
+        setIsRegisteringMarket(false)
+      }
       
       // Reset form
       setFormData({
@@ -100,7 +139,7 @@ export function CreateChatRoomDialog({
   }
 
   const handleClose = () => {
-    if (!isCreating) {
+    if (!isCreating && !isRegisteringMarket) {
       setFormData({
         name: '',
         description: '',
@@ -192,13 +231,18 @@ export function CreateChatRoomDialog({
             </Button>
             <Button
               type="submit"
-              disabled={isCreating || !formData.name.trim()}
+              disabled={isCreating || isRegisteringMarket || !formData.name.trim()}
               className="gap-2"
             >
               {isCreating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Creating...
+                </>
+              ) : isRegisteringMarket ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Registering Market...
                 </>
               ) : (
                 <>

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { SiteHeader } from '@/components/site-header'
 import { ConnectWalletButton } from '@/components/connect-wallet-button'
 import { MessageCircle, Plus, Users, Crown, User, Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
@@ -77,6 +76,15 @@ export default function ChatPage() {
       const response = await fetch(`/api/user/chat-rooms?walletAddress=${walletAddress}`)
       
       if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        
+        // If user not found, redirect to auth page
+        if (errorData.error === 'User not found') {
+          toast.error('Please create an account first')
+          router.push('/auth')
+          return
+        }
+        
         throw new Error('Failed to fetch chat rooms')
       }
       
@@ -93,6 +101,7 @@ export default function ChatPage() {
   const handleCreateChatRoom = () => {
     if (!userAddress) {
       toast.error('Please connect your wallet first')
+      router.push('/auth')
       return
     }
     setIsCreateDialogOpen(true)
@@ -142,7 +151,6 @@ export default function ChatPage() {
   if (!userAddress) {
     return (
       <div className="min-h-screen bg-background">
-        <SiteHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto text-center space-y-6">
             <div className="space-y-2">
@@ -162,7 +170,6 @@ export default function ChatPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <SiteHeader />
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center min-h-[400px]">
             <div className="flex items-center space-x-2">
@@ -177,7 +184,6 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <SiteHeader />
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">

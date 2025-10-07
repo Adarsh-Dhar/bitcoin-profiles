@@ -1,14 +1,16 @@
 import { openContractCall } from '@stacks/connect';
 import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, contractPrincipalCV, stringAsciiCV, stringUtf8CV, noneCV, someCV, bufferCV, cvToJSON, ClarityValue } from '@stacks/transactions';
-import { CONTRACT_ADDRESS, KEYTOKEN_TEMPLATE_NAME, network, getSenderAddress } from './stacks';
+import { network, getSenderAddress } from './stacks';
 
-export function useKeyTokenContract() {
+export function useDynamicKeyTokenContract(tokenContractAddress?: string, tokenContractName?: string) {
   const call = async (functionName: string, functionArgs: any[]) => {
     const senderAddress = getSenderAddress();
     if (!senderAddress) throw new Error('Wallet not connected');
+    if (!tokenContractAddress || !tokenContractName) throw new Error('Token contract not specified');
+    
     await openContractCall({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: KEYTOKEN_TEMPLATE_NAME,
+      contractAddress: tokenContractAddress,
+      contractName: tokenContractName,
       functionName,
       functionArgs,
       network,
@@ -19,13 +21,15 @@ export function useKeyTokenContract() {
 
   const ro = async (functionName: string, functionArgs: any[] = []) => {
     const senderAddress = getSenderAddress();
+    if (!tokenContractAddress || !tokenContractName) throw new Error('Token contract not specified');
+    
     return fetchCallReadOnlyFunction({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: KEYTOKEN_TEMPLATE_NAME,
+      contractAddress: tokenContractAddress,
+      contractName: tokenContractName,
       functionName,
       functionArgs,
       network,
-      senderAddress: senderAddress || CONTRACT_ADDRESS,
+      senderAddress: senderAddress || tokenContractAddress,
     });
   };
 
@@ -35,15 +39,13 @@ export function useKeyTokenContract() {
     return json?.value as any;
   };
 
-  // Robust extractor for uint values from cvToJSON outputs (handles response/option/tuple nesting)
+  // Robust extractor for uint values from cvToJSON outputs
   const extractUint = (json: any): bigint | undefined => {
     if (json == null) return undefined;
     if (typeof json === 'bigint') return json;
     if (typeof json === 'number') return BigInt(json);
     if (typeof json === 'string') {
-      // cvToJSON usually returns decimals as strings
       if (/^\d+$/.test(json)) return BigInt(json);
-      // sometimes repr strings like 'u123'
       const m = /^u(\d+)$/.exec(json);
       if (m) return BigInt(m[1]);
     }
@@ -51,13 +53,11 @@ export function useKeyTokenContract() {
       if (json.type === 'uint' && json.value != null) {
         return extractUint(json.value);
       }
-      // unwrap common wrappers
       if ('value' in json) {
         const inner = (json as any).value;
         const got = extractUint(inner);
         if (got !== undefined) return got;
       }
-      // scan nested fields (tuples, responses, options)
       for (const key of Object.keys(json)) {
         if (key === 'type') continue;
         const got = extractUint((json as any)[key]);
@@ -79,7 +79,6 @@ export function useKeyTokenContract() {
     // decoded helpers (return plain values)
     getNameDecoded: async () => {
       const v = await roDecoded('get-name');
-      // unwrap common shapes to plain string
       if (!v) return '';
       if (typeof v === 'string') return v;
       if (typeof (v as any).value === 'string') return (v as any).value;
@@ -128,7 +127,6 @@ export function useKeyTokenContract() {
       return call('mint', [uintCV(amount), standardPrincipalCV(sender)]);
     },
     mintBatch: (items: Array<{ amount: number; recipient: string }>) => {
-      // Executes sequentially to preserve clear signing flow in the wallet UI
       return items.reduce<Promise<void>>(async (prev, { amount, recipient }) => {
         await prev;
         await call('mint', [uintCV(amount), standardPrincipalCV(recipient)]);
@@ -136,5 +134,3 @@ export function useKeyTokenContract() {
     },
   };
 }
-
-

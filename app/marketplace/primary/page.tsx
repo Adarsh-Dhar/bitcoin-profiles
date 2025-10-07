@@ -10,6 +10,8 @@ import { MessageCircle, Users, Loader2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContract"
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
+import { useMarketOperations } from "@/hooks/useMarketOperations"
+import { KeyPurchaseExample } from "@/components/key-purchase-example"
 import { CONTRACT_ADDRESS, VENDING_NAME, getSenderAddress } from "@/hooks/stacks"
 
 interface User {
@@ -50,9 +52,13 @@ export default function PrimaryMarketplacePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isBuying, setIsBuying] = useState(false)
   const [isSettingMinter, setIsSettingMinter] = useState(false)
+  const [buyingRoomId, setBuyingRoomId] = useState<string | null>(null)
+  const [marketInfo, setMarketInfo] = useState<Record<string, any>>({})
+  const [loadingMarketInfo, setLoadingMarketInfo] = useState<Record<string, boolean>>({})
   const router = useRouter()
-  const { getBuyPrice, buyKeys } = useKeyVendingMachineContract()
+  const { buyKeys } = useKeyVendingMachineContract()
   const token = useKeyTokenContract()
+  const { buyKeysWithFullProcess, getMarketInfo } = useMarketOperations()
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -94,103 +100,61 @@ export default function PrimaryMarketplacePage() {
     }
   }
 
-  const handleBuyOneKey = async () => {
+  // Deterministically convert string IDs (e.g., cuid) to a uint for on-chain use
+  const toUintFromId = (id: string | number): bigint => {
+    if (typeof id === 'number') return BigInt(id)
+    // numeric string path
+    const asNum = Number(id)
+    if (Number.isFinite(asNum) && !Number.isNaN(asNum)) return BigInt(asNum)
+    // FNV-1a 64-bit hash for stable uint mapping
+    let hash = BigInt('14695981039346656037') // 0xCBF29CE484222325
+    const prime = BigInt('1099511628211') // 0x100000001B3
+    const mod64 = BigInt('18446744073709551616') // 2^64
+    for (let i = 0; i < id.length; i++) {
+      hash = (hash ^ BigInt(id.charCodeAt(i)))
+      hash = (hash * prime) % mod64
+    }
+    return hash
+  }
+
+  const loadMarketInfo = async (roomId: string) => {
     try {
-      // Preflight checks
-      const sender = getSenderAddress()
-      if (!sender) {
-        toast.error("Please connect your wallet")
-        return
-      }
+      setLoadingMarketInfo(prev => ({ ...prev, [roomId]: true }))
+      const info = await getMarketInfo(roomId)
+      setMarketInfo(prev => ({ ...prev, [roomId]: info }))
+    } catch (error) {
+      console.error('Failed to load market info:', error)
+      // Don't show error toast for market info loading failures
+    } finally {
+      setLoadingMarketInfo(prev => ({ ...prev, [roomId]: false }))
+    }
+  }
 
-      const vendingContractId = `${CONTRACT_ADDRESS}.${VENDING_NAME}`
-      if (!CONTRACT_ADDRESS || !VENDING_NAME) {
-        toast.error("Contract configuration missing")
-        return
-      }
-
+  const handleBuyOneKey = async (roomId: string | number) => {
+    try {
+      const roomIdStr = String(roomId)
+      setBuyingRoomId(roomIdStr)
       setIsBuying(true)
 
-      // Verify the token contract's authorized minter matches vending contract
-      try {
-        const minterDecoded: any = await token.getAuthorizedMinterDecoded()
-        // minterDecoded is optional principal -> either null or {repr or value}
-        const minterStr = (() => {
-          if (!minterDecoded) return ''
-          // cvToJSON for (some contract-principal) returns { type: 'some', value: { type: 'principal', value: { type: 'contract', address, contractName }}}
-          const v = (minterDecoded as any)
-          const inner = v?.value || v // handle already-unwrapped shapes
-          const principal = inner?.value || inner
-          const addr = principal?.address || principal?.value?.address
-          const name = principal?.contractName || principal?.value?.contractName
-          return addr && name ? `${addr}.${name}` : ''
-        })()
+      console.log(`Starting 3-step key purchase process for room: ${roomIdStr}`)
 
-        if (minterStr && minterStr !== vendingContractId) {
-          toast.error("Token minter not set to vending contract")
-          setIsBuying(false)
-          return
-        }
-        if (!minterStr) {
-          toast.error("Token minter not configured")
-          setIsBuying(false)
-          return
-        }
-      } catch (e) {
-        // If the chain call itself fails, surface a clear message
-        try {
-          // eslint-disable-next-line no-console
-          console.error('[minter-check:error]', e, {
-            token: `${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}.${process.env.NEXT_PUBLIC_KEYTOKEN_NAME}`,
-            vending: `${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}.${process.env.NEXT_PUBLIC_VENDING_NAME}`,
-          })
-        } catch {}
-        const msg = e instanceof Error ? e.message : String(e)
-        if (msg?.includes('UndefinedFunction("get-authorized-minter")') || msg?.includes('UndefinedFunction(\"get-authorized-minter\")')) {
-          // Attempt to set the authorized minter to the vending contract automatically (owner-only)
-          try {
-            toast.message("Setting token minter to vending contract… please confirm in wallet")
-            await token.setAuthorizedMinterContract(CONTRACT_ADDRESS, VENDING_NAME)
-            toast.success("Token minter set to vending contract. Continuing…")
-          } catch (setErr) {
-            const setMsg = setErr instanceof Error ? setErr.message : String(setErr)
-            toast.warning(setMsg || "Token minter read-only missing; proceeding without check")
-          }
-          // continue without returning
-        } else {
-          toast.error(msg || "Failed to verify token minter")
-          setIsBuying(false)
-          return
-        }
+      // Use the new 3-step process with comprehensive error handling
+      const result = await buyKeysWithFullProcess(roomIdStr, 1)
+
+      if (result.success) {
+        console.log('Key purchase completed successfully')
+        // Refresh market info after successful purchase
+        await loadMarketInfo(roomIdStr)
+      } else {
+        console.error('Key purchase failed:', result.error)
       }
-
-      // Quote on-chain for 1 key and add 2% slippage buffer
-      const quote: any = await getBuyPrice(BigInt(1))
-      // Surface contract identifier for quick debugging
-      try {
-        const addr = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM'
-        const name = process.env.NEXT_PUBLIC_VENDING_NAME || 'KeyVendingMachine'
-        // eslint-disable-next-line no-console
-        console.log('[buy-debug] using contract', `${addr}.${name}`)
-      } catch {}
-      // Handle decoded cvToJSON tuple shape: fields contain { type, value }
-      const totalCostRaw = quote?.["total-cost"]?.value ?? quote?.total_cost?.value ?? quote?.["total-cost"] ?? quote?.total_cost ?? 0
-      const totalCost = typeof totalCostRaw === 'bigint' ? totalCostRaw : BigInt(totalCostRaw)
-      // 2% buffer using integer math: ceil(total * 1.02) -> (total * 102) / 100
-      const maxWithBuffer = (totalCost * BigInt(102)) / BigInt(100)
-      if (totalCost <= BigInt(0)) {
-        toast.error("Quoted price is invalid")
-        setIsBuying(false)
-        return
-      }
-
-      await buyKeys(BigInt(1), maxWithBuffer)
-      toast.success("Purchase submitted")
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      toast.error(message || "Purchase failed")
+      console.error('Unexpected error in key purchase:', message)
+      toast.error(`Unexpected error: ${message}`)
     } finally {
       setIsBuying(false)
+      setBuyingRoomId(null)
     }
   }
 
@@ -204,9 +168,14 @@ export default function PrimaryMarketplacePage() {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Primary Marketplace</h1>
-      <p className="text-muted-foreground mt-2">Browse all chat rooms and buy keys.</p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Primary Marketplace</h1>
+        <p className="text-muted-foreground mt-2">Browse all chat rooms and buy keys.</p>
+      </div>
+
+      {/* 3-Step Process Example */}
+      <KeyPurchaseExample />
 
       {/* Owner-only utility: set minter to vending contract */}
       <div className="mt-4">
@@ -257,14 +226,56 @@ export default function PrimaryMarketplacePage() {
                 <div className="text-sm text-muted-foreground italic">No messages yet</div>
               )}
 
+              {/* Market Information */}
+              <div className="text-xs text-muted-foreground space-y-1">
+                {loadingMarketInfo[room.id] ? (
+                  <div className="flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading price...
+                  </div>
+                ) : marketInfo[room.id] ? (
+                  <div className="space-y-1">
+                    <div className="font-medium text-green-600">
+                      Price: {marketInfo[room.id].priceFormatted}
+                    </div>
+                    <div className="text-xs opacity-75">
+                      Vending: {marketInfo[room.id].market.vendingMachine.split('.')[1]}
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => loadMarketInfo(room.id)}
+                  >
+                    Load Price
+                  </Button>
+                )}
+              </div>
+
               <div className="flex items-center justify-between pt-2">
                 <Button variant="secondary" onClick={() => router.push(`/chat/${room.id}`)} className="gap-2">
                   <MessageCircle className="h-4 w-4" />
                   Enter
                 </Button>
-                <Button onClick={handleBuyOneKey} className="gap-2" disabled={isBuying}>
-                  Buy 1 key
-                  <ArrowRight className="h-4 w-4" />
+                <Button 
+                  onClick={() => handleBuyOneKey(room.id)} 
+                  className="gap-2" 
+                  disabled={isBuying}
+                  variant={buyingRoomId === room.id ? "default" : "default"}
+                >
+                  {isBuying && buyingRoomId === room.id ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Buying...
+                    </>
+                  ) : (
+                    <>
+                      Buy 1 key
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
