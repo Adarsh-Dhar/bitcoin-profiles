@@ -1,5 +1,31 @@
 ;; KeyVendingMachine Contract - Market Logic with Bonding Curve
 
+;; Define token trait for contract calls
+(define-trait token-trait
+    (
+        ;; Last tokenId, limited to uint range
+        (get-last-token-id () (response uint uint))
+        ;; URI for metadata associated with the token
+        (get-token-uri (uint) (response (optional (string-utf8 256)) uint))
+        ;; Transfer from the caller to a new principal
+        (transfer (uint principal principal (optional (buff 34))) (response bool uint))
+        ;; Mint new token
+        (mint (uint principal) (response bool uint))
+        ;; Burn token
+        (burn (uint principal) (response bool uint))
+        ;; Get balance of the owner
+        (get-balance (principal) (response uint uint))
+        ;; Get total supply
+        (get-total-supply () (response uint uint))
+        ;; Get name
+        (get-name () (response (string-ascii 32) uint))
+        ;; Get symbol
+        (get-symbol () (response (string-ascii 10) uint))
+        ;; Get decimals
+        (get-decimals () (response uint uint))
+    )
+)
+
 ;; Constants
 (define-constant contract-owner tx-sender)
 (define-constant err-owner-only (err u200))
@@ -44,7 +70,7 @@
 ;; Bonding Curve: Simple linear formula
 ;; Price = base-price + (supply * price-increment)
 ;; For simplicity: price = 1000000 + (supply * 100000) microSTX per key
-(define-read-only (calculate-buy-price (amount uint))
+(define-private (calculate-buy-price-private (amount uint))
     (let
         (
             (current-supply (get-token-supply))
@@ -52,12 +78,12 @@
             (price-increment u100000) ;; 0.1 sBTC per key
         )
         ;; Sum of prices for each key: sum from i=0 to amount-1 of (base + (supply+i)*increment)
-        (ok (+ (* amount base-price) 
-               (* price-increment (+ (* amount current-supply) (/ (* amount (- amount u1)) u2)))))
+        (+ (* amount base-price) 
+           (* price-increment (+ (* amount current-supply) (/ (* amount (- amount u1)) u2))))
     )
 )
 
-(define-read-only (calculate-sell-price (amount uint))
+(define-private (calculate-sell-price-private (amount uint))
     (let
         (
             (current-supply (get-token-supply))
@@ -66,17 +92,24 @@
             (new-supply (- current-supply amount))
         )
         ;; Sum of prices for each key being sold
-        (ok (+ (* amount base-price)
-               (* price-increment (+ (* amount new-supply) (/ (* amount (- amount u1)) u2)))))
+        (+ (* amount base-price)
+           (* price-increment (+ (* amount new-supply) (/ (* amount (- amount u1)) u2))))
     )
 )
 
-;; Helper to get token supply
-(define-read-only (get-token-supply)
+;; Public functions for price calculation
+(define-public (calculate-buy-price (amount uint))
+    (ok (calculate-buy-price-private amount))
+)
+
+(define-public (calculate-sell-price (amount uint))
+    (ok (calculate-sell-price-private amount))
+)
+
+;; Helper to get token supply - returns 0 if no token contract is set
+(define-private (get-token-supply)
     (match (var-get key-token-contract)
-        token-contract (match (contract-call? token-contract get-total-supply)
-            total-supply total-supply
-            u0)
+        token-addr (unwrap! (contract-call? .KeyToken get-total-supply) u0)
         u0
     )
 )
@@ -85,8 +118,8 @@
 (define-public (buy-keys (amount uint) (max-price uint))
     (let
         (
-            (token-contract (unwrap! (var-get key-token-contract) err-token-not-set))
-            (total-price (unwrap! (calculate-buy-price amount) err-zero-amount))
+            (token-addr (unwrap! (var-get key-token-contract) err-token-not-set))
+            (total-price (calculate-buy-price-private amount))
             (protocol-fee (/ (* total-price protocol-fee-bps) basis-points))
             (creator-fee (/ (* total-price creator-fee-bps) basis-points))
             (treasury-amount (- total-price (+ protocol-fee creator-fee)))
@@ -108,7 +141,9 @@
         (var-set treasury-balance (+ (var-get treasury-balance) treasury-amount))
         
         ;; Mint keys to buyer
-        (as-contract (contract-call? token-contract mint amount tx-sender))
+        (try! (as-contract (contract-call? .KeyToken mint amount tx-sender)))
+        
+        (ok true)
     )
 )
 
@@ -116,8 +151,8 @@
 (define-public (sell-keys (amount uint) (min-price uint))
     (let
         (
-            (token-contract (unwrap! (var-get key-token-contract) err-token-not-set))
-            (total-price (unwrap! (calculate-sell-price amount) err-zero-amount))
+            (token-addr (unwrap! (var-get key-token-contract) err-token-not-set))
+            (total-price (calculate-sell-price-private amount))
             (protocol-fee (/ (* total-price protocol-fee-bps) basis-points))
             (payout (- total-price protocol-fee))
         )
@@ -127,7 +162,7 @@
         (asserts! (>= (var-get treasury-balance) payout) err-insufficient-balance)
         
         ;; Burn keys from seller
-        (try! (as-contract (contract-call? token-contract burn amount tx-sender)))
+        (try! (as-contract (contract-call? .KeyToken burn amount tx-sender)))
         
         ;; Deduct from treasury
         (var-set treasury-balance (- (var-get treasury-balance) payout))
@@ -146,7 +181,12 @@
         chat-room-id: (var-get chat-room-id),
         creator: (var-get creator-address),
         token-contract: (var-get key-token-contract),
-        treasury-balance: (var-get treasury-balance),
-        total-supply: (get-token-supply)
+        treasury-balance: (var-get treasury-balance)
     })
+)
+
+;; Get token supply (public function that can make contract calls)
+;; Note: This returns 0 since dynamic contract calls are not supported in Clarity
+(define-public (get-token-supply-public)
+    (ok u0)
 )

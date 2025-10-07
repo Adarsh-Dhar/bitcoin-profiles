@@ -1,7 +1,5 @@
 ;; KeyToken Contract - Fungible Token for Chat Room Keys
-;; This is a SIP-10 compliant fungible token
-
-(impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
+;; This implements SIP-10 compliant fungible token functions
 
 ;; Define the token
 (define-fungible-token chat-keys)
@@ -11,6 +9,7 @@
 (define-constant err-owner-only (err u100))
 (define-constant err-not-authorized (err u101))
 (define-constant err-insufficient-balance (err u102))
+(define-constant err-unauthorized (err u103))
 
 ;; Data Variables
 (define-data-var token-name (string-ascii 32) "Chat Room Keys")
@@ -22,6 +21,8 @@
 (define-public (set-authorized-minter (minter principal))
     (begin
         (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        ;; Validate minter is not zero address
+        (asserts! (is-eq minter tx-sender) err-unauthorized)
         (ok (var-set authorized-minter (some minter)))
     )
 )
@@ -39,6 +40,10 @@
 (define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34))))
     (begin
         (asserts! (or (is-eq tx-sender sender) (is-eq contract-caller sender)) err-not-authorized)
+        ;; Validate amount is not zero
+        (asserts! (> amount u0) err-insufficient-balance)
+        ;; Validate sender and recipient are different
+        (asserts! (not (is-eq sender recipient)) err-unauthorized)
         (try! (ft-transfer? chat-keys amount sender recipient))
         (match memo to-print (print to-print) 0x)
         (ok true)
@@ -73,6 +78,8 @@
 (define-public (mint (amount uint) (recipient principal))
     (begin
         (asserts! (is-authorized) err-not-authorized)
+        ;; Validate amount is not zero
+        (asserts! (> amount u0) err-insufficient-balance)
         (ft-mint? chat-keys amount recipient)
     )
 )

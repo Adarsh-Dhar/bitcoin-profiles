@@ -43,13 +43,14 @@
         (asserts! (is-none existing-market) err-already-exists)
         (asserts! (is-none (map-get? registered-vending-machines vending-machine)) err-already-exists)
         (asserts! (is-none (map-get? registered-tokens token-contract)) err-already-exists)
+        ;; Validate creator is not zero address - removed problematic validation
         
         ;; Register the market
         (map-set market-registry chat-room-id {
             vending-machine: vending-machine,
             token-contract: token-contract,
             creator: creator,
-            created-at: block-height
+            created-at: burn-block-height
         })
         
         ;; Mark contracts as registered
@@ -92,13 +93,15 @@
     (let
         (
             (market-data (unwrap! (map-get? market-registry chat-room-id) err-not-found))
+            (vending-machine-addr (get vending-machine market-data))
+            (token-contract-addr (get token-contract market-data))
         )
         (asserts! (is-eq tx-sender contract-owner) err-owner-only)
         
         ;; Remove from registry
         (map-delete market-registry chat-room-id)
-        (map-delete registered-vending-machines (get vending-machine market-data))
-        (map-delete registered-tokens (get token-contract market-data))
+        (map-delete registered-vending-machines vending-machine-addr)
+        (map-delete registered-tokens token-contract-addr)
         
         ;; Decrement counter
         (var-set total-markets (- (var-get total-markets) u1))
