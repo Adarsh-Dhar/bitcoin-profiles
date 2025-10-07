@@ -3,17 +3,45 @@ import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, contractPrincip
 import { CONTRACT_ADDRESS, FACTORY_NAME, network, getSenderAddress } from './stacks';
 
 export function useFactoryContract() {
-  const call = async (functionName: string, functionArgs: any[]) => {
+  const call = async (functionName: string, functionArgs: any[]): Promise<string> => {
     const senderAddress = getSenderAddress();
     if (!senderAddress) throw new Error('Wallet not connected');
-    await openContractCall({
-      contractAddress: CONTRACT_ADDRESS,
-      contractName: FACTORY_NAME,
-      functionName,
-      functionArgs,
-      network,
-      appDetails: { name: 'Bitcoin Profiles', icon: `${window.location.origin}/placeholder-logo.png` },
-      onFinish: () => {},
+    // Log low-level contract invocation with decoded clarity values for debugging
+    try {
+      const decodedArgs = (functionArgs || []).map((a: any) => {
+        try { return cvToJSON(a); } catch { return a; }
+      });
+      console.log('[Factory.call] invoking', {
+        contractAddress: CONTRACT_ADDRESS,
+        contractName: FACTORY_NAME,
+        functionName,
+        args: decodedArgs,
+        network,
+        senderAddress,
+      });
+    } catch {}
+    return new Promise<string>((resolve, reject) => {
+      void openContractCall({
+        contractAddress: CONTRACT_ADDRESS,
+        contractName: FACTORY_NAME,
+        functionName,
+        functionArgs,
+        network,
+        appDetails: { name: 'Bitcoin Profiles', icon: `${window.location.origin}/placeholder-logo.png` },
+        onFinish: (data: any) => {
+          try {
+            const txId = data?.txId ?? data?.txid ?? data?.txID;
+            if (!txId || typeof txId !== 'string') {
+              reject(new Error('Transaction submitted but txId was not returned'));
+              return;
+            }
+            resolve(txId);
+          } catch (err) {
+            reject(err as Error);
+          }
+        },
+        onCancel: () => reject(new Error('User cancelled the transaction')),
+      } as any);
     });
   };
 
@@ -64,8 +92,80 @@ export function useFactoryContract() {
   };
 
   return {
+    // High-level helper that builds contract principals from wallet base address
+    generateMarket: async (
+      chatRoomId: string,
+      vendingMachine: string,
+      tokenContract: string,
+      creatorAddress?: string,
+    ): Promise<string> => {
+      const senderAddress = getSenderAddress();
+      if (!senderAddress) throw new Error('Wallet not connected');
+
+      // Validate chatRoomId
+      if (!chatRoomId || typeof chatRoomId !== 'string' || chatRoomId.trim().length === 0) {
+        throw new Error('Invalid chatRoomId: must be a non-empty string');
+      }
+
+      // Normalize contract identifiers using the wallet address as base when only names are provided
+      const normalizeContractId = (value: string, baseAddress: string): { address: string; name: string; id: string } => {
+        if (!value || typeof value !== 'string') {
+          throw new Error('Invalid contract identifier: expected a string');
+        }
+        const trimmed = value.trim();
+        // If only a name is provided, prefix with base address
+        if (!trimmed.includes('.')) {
+          if (!/^[-_a-zA-Z0-9]+$/.test(trimmed)) {
+            throw new Error(`Invalid contract name: ${trimmed}`);
+          }
+          return { address: baseAddress, name: trimmed, id: `${baseAddress}.${trimmed}` };
+        }
+        const [address, name] = trimmed.split('.');
+        if (!address || !name) throw new Error(`Invalid contract identifier: ${value}`);
+        if (!/^SP[0-9A-Z]+/.test(address)) {
+          // Accept subnets or test ids too, but give a clear error for obviously wrong addresses
+          throw new Error(`Invalid contract address: ${address}`);
+        }
+        if (!/^[-_a-zA-Z0-9]+$/.test(name)) throw new Error(`Invalid contract name: ${name}`);
+        return { address, name, id: `${address}.${name}` };
+      };
+
+      const creator = (creatorAddress && creatorAddress.trim().length > 0) ? creatorAddress : senderAddress;
+
+      const vending = normalizeContractId(vendingMachine, senderAddress);
+      const token = normalizeContractId(tokenContract, senderAddress);
+
+      // High-level parameter logging
+      console.log('[Factory.generateMarket] params', {
+        chatRoomId,
+        vendingMachineInput: vendingMachine,
+        tokenContractInput: tokenContract,
+        normalizedVending: vending.id,
+        normalizedToken: token.id,
+        creator,
+        senderAddress,
+      });
+
+      // Perform the actual registration call and return txId to allow gating chat-room creation on success
+      const arg0 = stringAsciiCV(chatRoomId);
+      const arg1 = contractPrincipalCV(vending.address, vending.name);
+      const arg2 = contractPrincipalCV(token.address, token.name);
+      const arg3 = standardPrincipalCV(creator);
+      try {
+        console.log('[Factory.generateMarket] clarity args', {
+          arg0: cvToJSON(arg0),
+          arg1: cvToJSON(arg1),
+          arg2: cvToJSON(arg2),
+          arg3: cvToJSON(arg3),
+        });
+      } catch {}
+      const txId = await call('register-market', [arg0, arg1, arg2, arg3]);
+
+      return txId;
+    },
+
     // Market registration
-    registerMarket: (chatRoomId: string, vendingMachine: string, tokenContract: string, creator: string) => {
+    registerMarket: (chatRoomId: string, vendingMachine: string, tokenContract: string, creator: string): Promise<string> => {
       // Parse the contract identifiers to extract address and name
       const [vendingAddress, vendingName] = vendingMachine.split('.')
       const [tokenAddress, tokenName] = tokenContract.split('.')
@@ -89,12 +189,19 @@ export function useFactoryContract() {
         throw new Error(`Invalid token contract identifier: ${tokenContract}`)
       }
       
-      return call('register-market', [
-        stringAsciiCV(chatRoomId),
-        contractPrincipalCV(vendingAddress, vendingName),
-        contractPrincipalCV(tokenAddress, tokenName),
-        standardPrincipalCV(creator),
-      ])
+      const a0 = stringAsciiCV(chatRoomId)
+      const a1 = contractPrincipalCV(vendingAddress, vendingName)
+      const a2 = contractPrincipalCV(tokenAddress, tokenName)
+      const a3 = standardPrincipalCV(creator)
+      try {
+        console.log('[Factory.registerMarket] clarity args', {
+          a0: cvToJSON(a0),
+          a1: cvToJSON(a1),
+          a2: cvToJSON(a2),
+          a3: cvToJSON(a3),
+        })
+      } catch {}
+      return call('register-market', [a0, a1, a2, a3])
     },
 
     // Read-only functions
@@ -107,7 +214,68 @@ export function useFactoryContract() {
     // Decoded helpers
     getMarketDecoded: async (chatRoomId: string) => {
       const v = await roDecoded('get-market', [stringAsciiCV(chatRoomId)]);
-      return v;
+      // cvToJSON shapes vary; unwrap until we reach the map payload or conclude it's none
+      const unwrap = (input: any): any => {
+        if (input == null) return undefined;
+        // Handle shorthand option { none: true } | { some: {...} }
+        if (typeof input === 'object' && ('none' in input || 'some' in input)) {
+          if ((input as any).none === true) return undefined;
+          return unwrap((input as any).some);
+        }
+        // Handle { type: 'optional-none' } | { type: 'optional-some', value: {...} }
+        if (typeof input === 'object' && typeof (input as any).type === 'string' && (input as any).type.startsWith('optional')) {
+          const t = String((input as any).type).toLowerCase();
+          if (t.includes('none')) return undefined;
+          return unwrap((input as any).value);
+        }
+        // Handle response wrappers { type: 'responseOk'|'ok', value: X } already removed by roDecoded, but be safe
+        if (typeof input === 'object' && typeof (input as any).type === 'string' && (String((input as any).type).toLowerCase().includes('response'))) {
+          return unwrap((input as any).value);
+        }
+        // Some serializers put the payload under .value
+        if (typeof input === 'object' && 'value' in input && !(input as any)['vending-machine'] && !(input as any)['token-contract']) {
+          return unwrap((input as any).value);
+        }
+        return input;
+      };
+
+      const raw = unwrap(v);
+      if (!raw || typeof raw !== 'object') return undefined;
+
+      // Normalize principals from cvToJSON into strings
+      const normalizePrincipal = (p: any): string | undefined => {
+        if (!p) return undefined;
+        if (typeof p === 'string') return p;
+        if (typeof p === 'object') {
+          // direct { address, name } or { address, contractName }
+          const address = (p.address ?? (p.value && p.value.address)) as string | undefined;
+          const name = (p.name ?? p.contractName ?? p['contract-name'] ?? (p.value && (p.value.name ?? p.value.contractName ?? p.value['contract-name']))) as string | undefined;
+          const standard = (p.standard ?? (p.value && p.value.standard)) as string | undefined;
+          if (address && name) return `${address}.${name}`;
+          if (address && !name) return address; // standard principal
+          if (typeof p.value === 'string') return p.value;
+          if (typeof p.principal === 'string') return p.principal;
+          if (typeof standard === 'string') return standard;
+        }
+        return undefined;
+      };
+
+      // Normalize possible key shapes from cvToJSON
+      const vendingRaw = (raw['vending-machine'] ?? raw['vendingMachine'] ?? raw['vending_machine']);
+      const tokenRaw = (raw['token-contract'] ?? raw['tokenContract'] ?? raw['token_contract']);
+      const creatorRaw = (raw['creator']);
+
+      const vending = normalizePrincipal(vendingRaw);
+      const token = normalizePrincipal(tokenRaw);
+      const creator = normalizePrincipal(creatorRaw);
+
+      if (!vending || !token || !creator) return undefined;
+
+      return { vendingMachine: vending, tokenContract: token, creator } as {
+        vendingMachine: string;
+        tokenContract: string;
+        creator: string;
+      };
     },
     
     getMarketByVendingMachineDecoded: async (vendingMachine: string) => {

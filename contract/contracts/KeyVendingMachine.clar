@@ -97,12 +97,12 @@
     )
 )
 
-;; Public functions for price calculation
-(define-public (calculate-buy-price (amount uint))
+;; Read-only functions for price calculation
+(define-read-only (calculate-buy-price (amount uint))
     (ok (calculate-buy-price-private amount))
 )
 
-(define-public (calculate-sell-price (amount uint))
+(define-read-only (calculate-sell-price (amount uint))
     (ok (calculate-sell-price-private amount))
 )
 

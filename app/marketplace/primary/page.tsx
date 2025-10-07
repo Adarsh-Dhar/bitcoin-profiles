@@ -11,7 +11,6 @@ import { toast } from "sonner"
 import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContract"
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
 import { useMarketOperations } from "@/hooks/useMarketOperations"
-import { KeyPurchaseExample } from "@/components/key-purchase-example"
 import { CONTRACT_ADDRESS, VENDING_NAME, getSenderAddress } from "@/hooks/stacks"
 
 interface User {
@@ -174,8 +173,6 @@ export default function PrimaryMarketplacePage() {
         <p className="text-muted-foreground mt-2">Browse all chat rooms and buy keys.</p>
       </div>
 
-      {/* 3-Step Process Example */}
-      <KeyPurchaseExample />
 
       {/* Owner-only utility: set minter to vending contract */}
       <div className="mt-4">
