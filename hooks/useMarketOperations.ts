@@ -1,7 +1,7 @@
 import { useFactoryContract } from './useFactoryContract';
 import { useKeyVendingMachineContract } from './useKeyVendingMachineContract';
 import { useDynamicKeyTokenContract } from './useDynamicKeyTokenContract';
-import { getSenderAddress, network } from './stacks';
+import { getSenderAddress, network, CONTRACT_ADDRESS, VENDING_NAME } from './stacks';
 import { toast } from 'sonner';
 
 interface MarketData {
@@ -38,7 +38,8 @@ export function useMarketOperations() {
       }
 
       // Extract contract identifiers from the market data
-      const vendingMachine = marketData.vendingMachine;
+      // Always prefer the current VM constant (v6) to avoid stale registry values
+      const vendingMachine = `${CONTRACT_ADDRESS}.${VENDING_NAME}`;
       const tokenContract = marketData.tokenContract;
       const creator = marketData.creator;
 
@@ -117,7 +118,12 @@ export function useMarketOperations() {
 
       // Add 2% slippage buffer for price protection
       const maxPrice = (price * BigInt(102)) / BigInt(100);
-      console.log(`Price with 2% slippage buffer: ${maxPrice} microSTX`);
+      console.log('[Buy] price & maxPrice', {
+        priceMicro: price.toString(),
+        priceSTX: (Number(price) / 1_000_000).toFixed(6),
+        maxPriceMicro: maxPrice.toString(),
+        maxPriceSTX: (Number(maxPrice) / 1_000_000).toFixed(6),
+      });
 
       // Step 2.5: Ensure caller has enough STX balance to cover maxPrice + fee buffer
       const apiBase = (network as any)?.coreApiUrl || (network as any)?.url || 'https://api.testnet.hiro.so';
@@ -145,6 +151,12 @@ export function useMarketOperations() {
         const stxBalance = bal1 > bal2 ? bal1 : bal2;
         // Use a conservative network fee buffer (0.1 STX)
         const required = maxPrice + BigInt(100_000);
+        console.log('[Buy] balance check', {
+          stxBalanceMicro: stxBalance.toString(),
+          stxBalanceSTX: (Number(stxBalance) / 1_000_000).toFixed(6),
+          requiredMicro: required.toString(),
+          requiredSTX: (Number(required) / 1_000_000).toFixed(6),
+        });
         if (stxBalance < required) {
           const toStx = (v: bigint) => (Number(v) / 1_000_000).toFixed(6);
           throw new Error(
@@ -153,12 +165,25 @@ export function useMarketOperations() {
         }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error('Preflight STX balance check failed:', msg);
+        console.error('[Buy] Preflight STX balance check failed:', msg);
         throw new Error(msg || 'Failed STX balance preflight');
       }
 
+      // Inspect vending machine on-chain state before executing the purchase
+      const vendingContract = useKeyVendingMachineContract(market.vendingMachine);
+      try {
+        const vmInfo = await vendingContract.getMarketInfo();
+        console.log('[Buy] vending get-market-info', vmInfo);
+      } catch (e) {
+        console.warn('[Buy] vending get-market-info failed (non-blocking)', e);
+      }
+
       // Step 3: Execute the purchase
-      console.log('Step 3: Executing purchase...');
+      console.log('Step 3: Executing purchase...', {
+        vendingMachine: market.vendingMachine,
+        amount: amount.toString(),
+        maxPriceMicro: maxPrice.toString(),
+      });
       
       // Parse vending machine contract identifier
       const [vendingAddress, vendingName] = market.vendingMachine.split('.');
@@ -166,17 +191,38 @@ export function useMarketOperations() {
         throw new Error(`Invalid vending machine contract identifier: ${market.vendingMachine}`);
       }
 
-      // Create vending machine contract instance for the specific market
-      const vendingContract = useKeyVendingMachineContract(market.vendingMachine);
-      
-      // Execute the buy transaction
-      await vendingContract.buyKeys(amount, maxPrice);
-      
-      console.log('Purchase transaction submitted successfully');
-      
+      // Create vending machine contract instance for the specific market (already created above)
+
+      // Execute the buy transaction against v6 signature with token principal
+      const txId = await vendingContract.buyKeysWithToken(amount, maxPrice, market.tokenContract);
+      console.log('[Buy] submitted', { txId });
+
+      // Wait for confirmation and log the result/err
+      if (txId) {
+        const receipt = await waitForTx(txId);
+        const status = receipt?.tx_status;
+        const resultRepr: string | undefined = receipt?.tx_result?.repr;
+        const errMatch = typeof resultRepr === 'string' ? /\(err u(\d+)\)/.exec(resultRepr) : null;
+        const errCode = errMatch ? Number(errMatch[1]) : undefined;
+
+        console.log('[Buy] receipt', {
+          txId,
+          status,
+          resultRepr,
+          contract_call: receipt?.contract_call,
+          events_count: receipt?.events?.length,
+        });
+
+        if (status !== 'success') {
+          const msg = errCode != null ? `Contract error u${errCode}` : `Tx failed: ${status}`;
+          throw new Error(msg);
+        }
+      }
+
+      console.log('Purchase transaction completed successfully');
       return {
         success: true,
-        transactionId: `tx-${Date.now()}` // In a real implementation, you'd get this from the transaction response
+        transactionId: txId || `tx-${Date.now()}`
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -191,6 +237,27 @@ export function useMarketOperations() {
       };
     }
   };
+
+  // Helper: wait for a tx and return the full receipt (logs/err codes)
+  async function waitForTx(txId: string, timeoutMs = 180_000) {
+    const apiBase = (network as any)?.coreApiUrl || (network as any)?.url || 'https://api.testnet.hiro.so';
+    const url = `${apiBase.replace(/\/$/, '')}/extended/v1/tx/${txId}`;
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) {
+          const j = await r.json();
+          const status = j?.tx_status;
+          if (status && status !== 'pending') {
+            return j;
+          }
+        }
+      } catch {}
+      await new Promise((res) => setTimeout(res, 2000));
+    }
+    throw new Error(`Timeout waiting for tx ${txId}`);
+  }
 
   // Convenience method that combines all three steps with comprehensive error handling
   const buyKeysWithFullProcess = async (

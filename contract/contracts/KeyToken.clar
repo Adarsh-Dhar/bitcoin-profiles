@@ -18,11 +18,12 @@
 (define-data-var authorized-minter (optional principal) none)
 
 ;; Authorization - Only authorized minter (KeyVendingMachine) can mint/burn
-(define-public (set-authorized-minter (minter principal))
+;; Owner-only: set the authorized minter to the contract-caller (safe, no unchecked principal)
+(define-public (authorize-caller-as-minter)
     (begin
         (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-        ;; Set the vending machine or any designated contract/user as the authorized minter
-        (ok (var-set authorized-minter (some minter)))
+        (var-set authorized-minter (some contract-caller))
+        (ok true)
     )
 )
 
@@ -74,20 +75,20 @@
 )
 
 ;; Mint function - Only callable by authorized minter
-(define-public (mint (amount uint) (recipient principal))
+(define-public (mint (amount uint))
     (begin
         (asserts! (is-authorized) err-not-authorized)
         ;; Validate amount is not zero
         (asserts! (> amount u0) err-insufficient-balance)
-        (ft-mint? chat-keys amount recipient)
+        (ft-mint? chat-keys amount tx-sender)
     )
 )
 
 ;; Burn function - Only callable by authorized minter
-(define-public (burn (amount uint) (sender principal))
+(define-public (burn (amount uint))
     (begin
         (asserts! (is-authorized) err-not-authorized)
-        (asserts! (>= (ft-get-balance chat-keys sender) amount) err-insufficient-balance)
-        (ft-burn? chat-keys amount sender)
+        (asserts! (>= (ft-get-balance chat-keys tx-sender) amount) err-insufficient-balance)
+        (ft-burn? chat-keys amount tx-sender)
     )
 )

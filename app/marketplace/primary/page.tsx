@@ -10,8 +10,9 @@ import { MessageCircle, Users, Loader2, ArrowRight } from "lucide-react"
 import { toast } from "sonner"
 import { useKeyVendingMachineContract } from "@/hooks/useKeyVendingMachineContract"
 import { useKeyTokenContract } from "@/hooks/useKeyTokenContract"
+import { useDynamicKeyTokenContract } from "@/hooks/useDynamicKeyTokenContract"
 import { useMarketOperations } from "@/hooks/useMarketOperations"
-import { CONTRACT_ADDRESS, VENDING_NAME, getSenderAddress } from "@/hooks/stacks"
+import { CONTRACT_ADDRESS, VENDING_NAME, KEYTOKEN_TEMPLATE_NAME, getSenderAddress } from "@/hooks/stacks"
 import { useFactoryContract } from "@/hooks/useFactoryContract"
 
 interface User {
@@ -54,6 +55,8 @@ export default function PrimaryMarketplacePage() {
   const [isSettingMinter, setIsSettingMinter] = useState(false)
   const [isUnregistering, setIsUnregistering] = useState(false)
   const [unregisteringRoomId, setUnregisteringRoomId] = useState<string | null>(null)
+  const [isMigrating, setIsMigrating] = useState(false)
+  const [migratingRoomId, setMigratingRoomId] = useState<string | null>(null)
   const [buyingRoomId, setBuyingRoomId] = useState<string | null>(null)
   const [marketInfo, setMarketInfo] = useState<Record<string, any>>({})
   const [loadingMarketInfo, setLoadingMarketInfo] = useState<Record<string, boolean>>({})
@@ -139,6 +142,21 @@ export default function PrimaryMarketplacePage() {
       setBuyingRoomId(roomIdStr)
       setIsBuying(true)
 
+      console.log(`[UI] Buy 1 key clicked for room ${roomIdStr}`)
+      // Optional: prefetch and log market info/price shown in UI
+      try {
+        const info = await getMarketInfo(roomIdStr)
+        console.log('[UI] MarketInfo', {
+          roomId: roomIdStr,
+          vendingMachine: info.market.vendingMachine,
+          tokenContract: info.market.tokenContract,
+          priceForOneMicro: info.priceForOne.toString(),
+          priceForOneSTX: (Number(info.priceForOne) / 1_000_000).toFixed(6),
+        })
+      } catch (e) {
+        console.warn('[UI] MarketInfo prefetch failed (non-blocking)', e)
+      }
+
       console.log(`Starting 3-step key purchase process for room: ${roomIdStr}`)
 
       // Use the new 3-step process with comprehensive error handling
@@ -195,6 +213,79 @@ export default function PrimaryMarketplacePage() {
     } finally {
       setIsUnregistering(false)
       setUnregisteringRoomId(null)
+    }
+  }
+
+  const handleMigrateToV6 = async (roomId: string | number) => {
+    try {
+      const roomIdStr = String(roomId)
+      const sender = getSenderAddress()
+      if (!sender) {
+        toast.error("Please connect your wallet")
+        return
+      }
+      if (sender !== CONTRACT_ADDRESS) {
+        toast.error("Owner-only action: connect with deployer wallet")
+        return
+      }
+
+      setMigratingRoomId(roomIdStr)
+      setIsMigrating(true)
+
+      const vendingId = `${CONTRACT_ADDRESS}.${VENDING_NAME}`
+      const tokenId = `${CONTRACT_ADDRESS}.${KEYTOKEN_TEMPLATE_NAME}`
+
+      console.log('[Migrate v6] start', { roomIdStr, vendingId, tokenId, sender })
+
+      // 1) Unregister existing market (if any)
+      try {
+        console.log('[Migrate v6] unregister...')
+        await factory.unregisterMarket(roomIdStr)
+        console.log('[Migrate v6] unregistered')
+      } catch (e) {
+        console.warn('[Migrate v6] unregister skipped/failed (continuing):', e)
+      }
+
+      // 2) Register v6 market
+      console.log('[Migrate v6] register v6...', { vendingId, tokenId })
+      await factory.registerMarket(roomIdStr, vendingId, tokenId)
+      console.log('[Migrate v6] registered')
+
+      // 3) v6 uses explicit authorization path (no initialize with token)
+      const vending = useKeyVendingMachineContract(vendingId)
+
+      // 4) Authorize vending as minter on KeyToken_v6
+      console.log('[Migrate v6] authorize minter on token (via VM helper)...')
+      try {
+        await vending.authorizeTokenMinter(tokenId)
+        console.log('[Migrate v6] minter authorized via VM')
+      } catch (e) {
+        console.warn('[Migrate v6] VM authorize-token-minter failed, falling back to token.set-authorized-minter', e)
+        const [tokenAddr, tokenName] = tokenId.split('.')
+        const dynToken = useDynamicKeyTokenContract(tokenAddr, tokenName)
+        await dynToken.setAuthorizedMinterContract(CONTRACT_ADDRESS, VENDING_NAME)
+        console.log('[Migrate v6] minter authorized via token')
+      }
+
+      // 5) Optional: set protocol treasury to sender (owner)
+      try {
+        console.log('[Migrate v6] set protocol treasury...')
+        await vending.setProtocolTreasury(sender)
+        console.log('[Migrate v6] protocol treasury set')
+      } catch (e) {
+        console.warn('[Migrate v6] set protocol treasury failed (non-blocking):', e)
+      }
+
+      toast.success('Migrated market to v6 successfully')
+      // Refresh market info
+      await loadMarketInfo(roomIdStr)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('[Migrate v6] failed:', msg)
+      toast.error(msg || 'Migration failed')
+    } finally {
+      setIsMigrating(false)
+      setMigratingRoomId(null)
     }
   }
 
@@ -317,6 +408,29 @@ export default function PrimaryMarketplacePage() {
                           </>
                         ) : (
                           <>Unregister</>
+                        )}
+                      </Button>
+                    )
+                  })()}
+                  {(() => {
+                    const sender = getSenderAddress()
+                    const isOwner = sender && sender === CONTRACT_ADDRESS
+                    if (!isOwner) return null
+                    return (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMigrateToV6(room.id)}
+                        disabled={isMigrating && migratingRoomId === room.id}
+                        className="gap-2"
+                      >
+                        {isMigrating && migratingRoomId === room.id ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Migrating…
+                          </>
+                        ) : (
+                          <>Migrate to v6</>
                         )}
                       </Button>
                     )

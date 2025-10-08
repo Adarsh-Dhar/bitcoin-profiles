@@ -150,22 +150,22 @@ export function useFactoryContract() {
       const arg0 = stringAsciiCV(chatRoomId);
       const arg1 = contractPrincipalCV(vending.address, vending.name);
       const arg2 = contractPrincipalCV(token.address, token.name);
-      const arg3 = standardPrincipalCV(creator);
       try {
         console.log('[Factory.generateMarket] clarity args', {
           arg0: cvToJSON(arg0),
           arg1: cvToJSON(arg1),
           arg2: cvToJSON(arg2),
-          arg3: cvToJSON(arg3),
         });
       } catch {}
-      const txId = await call('register-market', [arg0, arg1, arg2, arg3]);
+      // register-market takes exactly (chat-room-id, vending-machine, token-contract)
+      const txId = await call('register-market', [arg0, arg1, arg2]);
 
       return txId;
     },
 
     // Market registration
-    registerMarket: (chatRoomId: string, vendingMachine: string, tokenContract: string, creator: string): Promise<string> => {
+    // `creator` is accepted for backwards compatibility but not sent; contract uses tx-sender
+    registerMarket: (chatRoomId: string, vendingMachine: string, tokenContract: string, creator?: string): Promise<string> => {
       // Parse the contract identifiers to extract address and name
       const [vendingAddress, vendingName] = vendingMachine.split('.')
       const [tokenAddress, tokenName] = tokenContract.split('.')
@@ -192,16 +192,15 @@ export function useFactoryContract() {
       const a0 = stringAsciiCV(chatRoomId)
       const a1 = contractPrincipalCV(vendingAddress, vendingName)
       const a2 = contractPrincipalCV(tokenAddress, tokenName)
-      const a3 = standardPrincipalCV(creator)
       try {
         console.log('[Factory.registerMarket] clarity args', {
           a0: cvToJSON(a0),
           a1: cvToJSON(a1),
           a2: cvToJSON(a2),
-          a3: cvToJSON(a3),
         })
       } catch {}
-      return call('register-market', [a0, a1, a2, a3])
+      // register-market takes exactly (chat-room-id, vending-machine, token-contract)
+      return call('register-market', [a0, a1, a2])
     },
 
     // Read-only functions

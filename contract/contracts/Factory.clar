@@ -33,13 +33,14 @@
 (define-public (register-market 
     (chat-room-id (string-ascii 256))
     (vending-machine principal)
-    (token-contract principal)
-    (creator principal))
+    (token-contract principal))
     (let
         (
             (existing-market (map-get? market-registry chat-room-id))
         )
         ;; Validations
+        (asserts! (> (len chat-room-id) u0) err-not-found)
+        (asserts! (is-eq tx-sender contract-owner) err-owner-only)
         (asserts! (is-none existing-market) err-already-exists)
         (asserts! (is-none (map-get? registered-vending-machines vending-machine)) err-already-exists)
         (asserts! (is-none (map-get? registered-tokens token-contract)) err-already-exists)
@@ -49,7 +50,7 @@
         (map-set market-registry chat-room-id {
             vending-machine: vending-machine,
             token-contract: token-contract,
-            creator: creator,
+            creator: tx-sender,
             created-at: burn-block-height
         })
         
@@ -88,7 +89,7 @@
     (ok (var-get total-markets))
 )
 
-;; Administrative function to remove a market (if needed)
+;; Administrative function to remove a market (owner-only)
 (define-public (unregister-market (chat-room-id (string-ascii 256)))
     (let
         (
@@ -97,8 +98,9 @@
             (token-contract-addr (get token-contract market-data))
         )
         (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        (asserts! (> (len chat-room-id) u0) err-not-found)
         
-        ;; Remove from registry
+        ;; Remove from registry and registered indexes
         (map-delete market-registry chat-room-id)
         (map-delete registered-vending-machines vending-machine-addr)
         (map-delete registered-tokens token-contract-addr)

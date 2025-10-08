@@ -43,8 +43,8 @@ export function getSenderAddress(): string | undefined {
 }
 
 export const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || 'ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4';
-export const FACTORY_NAME = process.env.NEXT_PUBLIC_FACTORY_NAME || 'Factory';
-export const KEYTOKEN_TEMPLATE_NAME = process.env.NEXT_PUBLIC_KEYTOKEN_TEMPLATE_NAME || 'KeyToken';
-export const VENDING_NAME = process.env.NEXT_PUBLIC_VENDING_NAME || 'KeyVendingMachine';
+export const FACTORY_NAME = process.env.NEXT_PUBLIC_FACTORY_NAME || 'Factory_v6';
+export const KEYTOKEN_TEMPLATE_NAME = process.env.NEXT_PUBLIC_KEYTOKEN_TEMPLATE_NAME || 'KeyToken_v6';
+export const VENDING_NAME = process.env.NEXT_PUBLIC_VENDING_NAME || 'KeyVendingMachine_v6';
 
 

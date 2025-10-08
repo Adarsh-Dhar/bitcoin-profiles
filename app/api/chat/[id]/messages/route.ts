@@ -3,10 +3,10 @@ import prisma from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: chatRoomId } = params
+    const { id: chatRoomId } = await params
     const { walletAddress, content } = await request.json()
 
     if (!walletAddress || !content) {
@@ -97,10 +97,10 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: chatRoomId } = params
+    const { id: chatRoomId } = await params
     const { searchParams } = new URL(request.url)
     const walletAddress = searchParams.get('walletAddress')
     const page = parseInt(searchParams.get('page') || '1')

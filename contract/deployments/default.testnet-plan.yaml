@@ -9,23 +9,23 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: Factory
+            contract-name: Factory_v7
             expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
-            cost: 1003928
+            cost: 14336755939
             path: contracts/Factory.clar
             anchor-block-only: true
             clarity-version: 1
         - contract-publish:
-            contract-name: KeyToken
+            contract-name: KeyToken_v7
             expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
-            cost: 1002843
+            cost: 14318686567
             path: contracts/KeyToken.clar
             anchor-block-only: true
             clarity-version: 1
         - contract-publish:
-            contract-name: KeyVendingMachine
+            contract-name: KeyVendingMachine_v7
             expected-sender: ST3TAJ5G6N40MG8TDXYMXQ4TTH4YAB8KVVP4PTGF4
-            cost: 1006639
+            cost: 14375476021
             path: contracts/KeyVendingMachine.clar
             anchor-block-only: true
             clarity-version: 1

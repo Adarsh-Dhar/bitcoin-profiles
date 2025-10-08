@@ -42,17 +42,8 @@ export function ChatRoomTokenManager({ chatRoomId, creatorAddress }: ChatRoomTok
   const loadTokenInfo = async () => {
     try {
       setIsLoading(true);
-      
-      // Check if chat room is registered
-      const isRegistered = await factory.isChatRoomRegisteredDecoded(chatRoomId);
-      if (!isRegistered) {
-        setTokenInfo({});
-        return;
-      }
-
-      // Get chat room metadata
-      const metadata = await factory.getChatRoomMetadataDecoded(chatRoomId);
-      const tokenContract = await factory.getChatRoomTokenDecoded(chatRoomId);
+      const market = await factory.getMarketDecoded(String(chatRoomId));
+      const tokenContract = market?.tokenContract as string | undefined;
       
       if (tokenContract && typeof tokenContract === 'string') {
         // Parse contract address and name from the contract principal
@@ -61,24 +52,22 @@ export function ChatRoomTokenManager({ chatRoomId, creatorAddress }: ChatRoomTok
         setTokenInfo({
           contractAddress: address,
           contractName: name,
-          name: metadata?.name || 'Unknown',
-          symbol: metadata?.symbol || 'KEY',
+          name: 'Chat Room Keys',
+          symbol: 'KEYS',
           chatRoomId: BigInt(chatRoomId),
         });
 
         // Load token details
         try {
-          const [totalSupply, userBalance, tokenChatRoomId] = await Promise.all([
+          const [totalSupply, userBalance] = await Promise.all([
             keyToken.getTotalSupplyDecoded(),
             keyToken.getBalanceDecoded(creatorAddress),
-            keyToken.getChatRoomIdDecoded(),
           ]);
 
           setTokenInfo(prev => ({
             ...prev,
             totalSupply,
             userBalance,
-            chatRoomId: tokenChatRoomId,
           }));
         } catch (error) {
           console.warn('Failed to load token details:', error);
@@ -92,25 +81,7 @@ export function ChatRoomTokenManager({ chatRoomId, creatorAddress }: ChatRoomTok
     }
   };
 
-  // Create chat room token
-  const createChatRoomToken = async () => {
-    try {
-      setIsCreating(true);
-      const tokenName = `Chat Room ${chatRoomId} Key`;
-      const tokenSymbol = `CR${chatRoomId}KEY`;
-      
-      await factory.createChatRoomToken(tokenName, tokenSymbol, undefined, chatRoomId);
-      toast.success('Chat room token created! Please wait for deployment...');
-      
-      // Reload token info after creation
-      setTimeout(loadTokenInfo, 2000);
-    } catch (error) {
-      console.error('Failed to create chat room token:', error);
-      toast.error('Failed to create chat room token');
-    } finally {
-      setIsCreating(false);
-    }
-  };
+  // Create chat room token flow removed in v6 (handled via Factory UI)
 
   // Buy keys
   const buyKeys = async () => {
@@ -118,8 +89,13 @@ export function ChatRoomTokenManager({ chatRoomId, creatorAddress }: ChatRoomTok
       setIsBuying(true);
       const amount = BigInt(buyAmount);
       const maxPriceValue = BigInt(maxPrice);
-      
-      await vendingMachine.buyKeys(amount, maxPriceValue);
+      const tokenId = tokenInfo.contractAddress && tokenInfo.contractName
+        ? `${tokenInfo.contractAddress}.${tokenInfo.contractName}`
+        : undefined;
+      if (!tokenId) throw new Error('Token contract not available');
+
+      // Use v6 signature which requires the token principal
+      await vendingMachine.buyKeysWithToken(amount, maxPriceValue, tokenId);
       toast.success(`Bought ${buyAmount} keys!`);
       
       // Reload token info after purchase
@@ -165,12 +141,8 @@ export function ChatRoomTokenManager({ chatRoomId, creatorAddress }: ChatRoomTok
           <p className="text-sm text-gray-600">
             Create a unique token for this chat room to enable key trading.
           </p>
-          <Button 
-            onClick={createChatRoomToken} 
-            disabled={isCreating}
-            className="w-full"
-          >
-            {isCreating ? 'Creating...' : 'Create Chat Room Token'}
+          <Button disabled className="w-full">
+            Coming soon
           </Button>
         </CardContent>
       </Card>
