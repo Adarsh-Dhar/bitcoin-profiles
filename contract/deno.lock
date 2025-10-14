@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "remote": {
+    "https://deno.land/x/clarinet@v1.7.0/clarityTypes.ts": "1fa191738eef1430c37c590ff5502555d8ea26eea5362e0744afb7da155c35d8",
+    "https://deno.land/x/clarinet@v1.7.0/eventTypes.ts": "fd51aa8db0a9da24da837ce34c848d83c84ab42e9cda6345602ed8efbcef107d",
+    "https://deno.land/x/clarinet@v1.7.0/index.ts": "2ffe1d220d2c0f5e1fa4db6663786263b56996d10944f282aad4368b90bb3f11"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@hirosystems/clarinet-sdk@^3.6.0",
+        "npm:@stacks/transactions@^7.2.0",
+        "npm:@types/node@^24.4.0",
+        "npm:chokidar-cli@3",
+        "npm:vitest-environment-clarinet@^2.3.0",
+        "npm:vitest@^3.2.4"
+      ]
+    }
+  }
+}

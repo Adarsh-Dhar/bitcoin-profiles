@@ -38,8 +38,8 @@ export function useMarketOperations() {
       }
 
       // Extract contract identifiers from the market data
-      // Always prefer the current VM constant (v6) to avoid stale registry values
-      const vendingMachine = `${CONTRACT_ADDRESS}.${VENDING_NAME}`;
+      // IMPORTANT: Use registry-provided vending machine to match the deployed contract
+      const vendingMachine = marketData.vendingMachine;
       const tokenContract = marketData.tokenContract;
       const creator = marketData.creator;
 

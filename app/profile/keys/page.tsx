@@ -44,7 +44,7 @@ export default function KeysPage() {
         setError("Please connect your wallet to initialize contracts")
         return
       }
-      await vending.initialize(sender, CONTRACT_ADDRESS, CONTRACT_ADDRESS, KEYTOKEN_TEMPLATE_NAME, 1)
+      await vending.initialize("1", sender)
       setInitSuccess("Contracts initialized. Please confirm in wallet, then refresh.")
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e)
@@ -104,20 +104,8 @@ export default function KeysPage() {
             ])
             console.log('Token metadata (decoded):', { name, symbol, totalSupply: totalSupplyBig })
 
-            // Get chat room ID for this key
+            // Chat room ID not available in current contract
             let chatRoomId: number | null = null
-            try {
-              const holderChatRoom = await keyTokenContract.getHolderChatRoomId(address)
-              // Convert ClarityValue to number if possible
-              if (holderChatRoom && typeof holderChatRoom === 'object' && 'value' in holderChatRoom) {
-                chatRoomId = Number((holderChatRoom as any).value)
-              } else if (typeof holderChatRoom === 'number' || typeof holderChatRoom === 'bigint') {
-                chatRoomId = Number(holderChatRoom)
-              }
-              console.log(`🔑 Key Chat Room ID for ${name} (${symbol}):`, chatRoomId)
-            } catch (e) {
-              console.warn('Failed to get chat room ID for key:', e)
-            }
 
             const keyDataWithChatRoom = {
               creator: "Current Creator", // This would be the actual creator address
@@ -131,35 +119,7 @@ export default function KeysPage() {
             console.log('📊 Complete Key Data:', keyDataWithChatRoom)
             keysData.push(keyDataWithChatRoom)
 
-            // Best-effort: holder metadata (do not block or fail UI)
-            ;(async () => {
-              try {
-                const holderTimeout = new Promise((_, reject) => setTimeout(() => reject(new Error('holder-timeout')), 3000))
-                const holderPromise = (async () => {
-                  const holderInfo: any = await keyTokenContract.getHolderInfoDecoded(address)
-                  const holderChatRoom = await keyTokenContract.getHolderChatRoomId(address)
-                  console.log('Holder info (decoded):', holderInfo)
-                  console.log('Holder chat-room-id (raw cv):', holderChatRoom)
-                  
-                  // Log the chat_room_id for this key
-                  console.log(`🔑 Key Chat Room ID for ${name} (${symbol}):`, holderChatRoom)
-                  
-                  console.log('Key detail:', {
-                    creator: "Current Creator",
-                    balance,
-                    tokenName: name,
-                    tokenSymbol: symbol,
-                    totalSupply: totalSupplyBig,
-                    holderInfo,
-                    holderChatRoomRaw: holderChatRoom,
-                  })
-                })()
-                await Promise.race([holderPromise, holderTimeout])
-              } catch (e) {
-                // eslint-disable-next-line no-console
-                console.warn('[holder-meta] skipped', e)
-              }
-            })()
+            // Holder metadata functions not available in current contract
           } else {
             console.log('No keys found for address:', address)
             console.log('This might be because:')

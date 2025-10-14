@@ -111,26 +111,16 @@ export function useDynamicKeyTokenContract(tokenContractAddress?: string, tokenC
         memo ? someCV(bufferCV(memo)) : noneCV(),
       ]),
 
-    // admin
-    setAuthorizedMinter: (minter: string) => call('set-authorized-minter', [standardPrincipalCV(minter)]),
-    setAuthorizedMinterContract: (address: string, name: string) =>
-      call('set-authorized-minter', [contractPrincipalCV(address, name)]),
+    // admin - only contract owner can authorize minter
+    authorizeCallerAsMinter: () => call('authorize-caller-as-minter', []),
 
-    // minter-only
-    mint: (amount: number, recipient: string) => call('mint', [uintCV(amount), standardPrincipalCV(recipient)]),
-    burn: (amount: number, owner: string) => call('burn', [uintCV(amount), standardPrincipalCV(owner)]),
+    // minter-only - recipient is always tx-sender in the contract
+    mint: (amount: number) => call('mint', [uintCV(amount)]),
+    burn: (amount: number) => call('burn', [uintCV(amount)]),
 
     // convenience helpers
     mintToSelf: (amount: number) => {
-      const sender = getSenderAddress();
-      if (!sender) throw new Error('Wallet not connected');
-      return call('mint', [uintCV(amount), standardPrincipalCV(sender)]);
-    },
-    mintBatch: (items: Array<{ amount: number; recipient: string }>) => {
-      return items.reduce<Promise<void>>(async (prev, { amount, recipient }) => {
-        await prev;
-        await call('mint', [uintCV(amount), standardPrincipalCV(recipient)]);
-      }, Promise.resolve());
+      return call('mint', [uintCV(amount)]);
     },
   };
 }

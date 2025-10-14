@@ -6,9 +6,16 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "vitest run",
-    "test:report": "vitest run -- --coverage --costs",
-    "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test:report\""
+    "test": "deno run --allow-read --allow-net --no-check comprehensive-tests.ts",
+    "test:report": "deno run --allow-read --allow-net --no-check comprehensive-tests.ts",
+    "test:watch": "chokidar \"tests/**/*.ts\" \"contracts/**/*.clar\" -c \"npm run test\"",
+    "test:vending": "deno run --allow-read --allow-net --no-check tests/key-vending-machine.test.ts",
+    "test:token": "deno run --allow-read --allow-net --no-check tests/key-token.test.ts",
+    "test:factory": "deno run --allow-read --allow-net --no-check tests/factory.test.ts",
+    "test:all": "deno run --allow-read --allow-net --no-check comprehensive-tests.ts",
+    "test:bun": "bun run working-bun-tests.ts",
+    "console": "clarinet console",
+    "check": "clarinet check"
   },
   "author": "",
   "license": "ISC",

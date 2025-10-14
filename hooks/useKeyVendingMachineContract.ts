@@ -106,23 +106,14 @@ export function useKeyVendingMachineContract(contractId?: string) {
   };
 
   return {
-    // init/admin
-    initialize: (roomId: string, creator: string, tokenContractId: string) => {
-      const [tokenAddr, tokenName] = (tokenContractId || '').split('.');
-      if (!tokenAddr || !tokenName) throw new Error(`Invalid token contract id: ${tokenContractId}`);
+    // init/admin - contract only takes roomId and creator
+    initialize: (roomId: string, creator: string) => {
       return call('initialize', [
         stringAsciiCV(roomId),
         standardPrincipalCV(creator),
-        // must be a contract principal for the token contract
-        contractPrincipalCV(tokenAddr, tokenName),
       ]);
     },
     setProtocolTreasury: (treasury: string) => call('set-protocol-treasury', [standardPrincipalCV(treasury)]),
-    authorizeTokenMinter: (tokenContractId: string) => {
-      const [addr, name] = (tokenContractId || '').split('.');
-      if (!addr || !name) throw new Error(`Invalid token contract id: ${tokenContractId}`);
-      return call('authorize-token-minter', [contractPrincipalCV(addr, name)]);
-    },
 
     // pricing read-onlys (decoded to plain JSON values)
     calculateBuyPrice: (amount: number | bigint) => roDecoded('calculate-buy-price', [uintCV(amount as any)]),
@@ -169,11 +160,12 @@ export function useKeyVendingMachineContract(contractId?: string) {
       return n ?? BigInt(0);
     },
 
-    // trading (legacy signatures)
-    buyKeys: (amount: number | bigint, maxPrice: number | bigint) =>
-      call('buy-keys', [uintCV(amount as any), uintCV(maxPrice as any)]),
-    sellKeys: (amount: number | bigint, minPrice: number | bigint) =>
-      call('sell-keys', [uintCV(amount as any), uintCV(minPrice as any)]),
+    // trading (legacy signatures - DEPRECATED, use buyKeysWithToken/sellKeysWithToken)
+    // Note: These functions require token trait parameter in the contract
+    // buyKeys: (amount: number | bigint, maxPrice: number | bigint) =>
+    //   call('buy-keys', [uintCV(amount as any), uintCV(maxPrice as any)]),
+    // sellKeys: (amount: number | bigint, minPrice: number | bigint) =>
+    //   call('sell-keys', [uintCV(amount as any), uintCV(minPrice as any)]),
 
     // trading (v6 signatures include token contract principal)
     buyKeysWithToken: (amount: number | bigint, maxPrice: number | bigint, tokenContractId: string) => {

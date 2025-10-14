@@ -61,7 +61,7 @@ export default function PrimaryMarketplacePage() {
   const [marketInfo, setMarketInfo] = useState<Record<string, any>>({})
   const [loadingMarketInfo, setLoadingMarketInfo] = useState<Record<string, boolean>>({})
   const router = useRouter()
-  const { buyKeys } = useKeyVendingMachineContract()
+  const vending = useKeyVendingMachineContract()
   const token = useKeyTokenContract()
   const { buyKeysWithFullProcess, getMarketInfo } = useMarketOperations()
   const factory = useFactoryContract()
@@ -96,7 +96,7 @@ export default function PrimaryMarketplacePage() {
         return
       }
       toast.message("Setting token minter to vending… confirm in wallet")
-      await token.setAuthorizedMinterContract(CONTRACT_ADDRESS, VENDING_NAME)
+      await token.authorizeCallerAsMinter()
       toast.success("Token minter set to vending contract")
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -255,16 +255,15 @@ export default function PrimaryMarketplacePage() {
       const vending = useKeyVendingMachineContract(vendingId)
 
       // 4) Authorize vending as minter on KeyToken_v6
-      console.log('[Migrate v6] authorize minter on token (via VM helper)...')
+      console.log('[Migrate v6] authorize minter on token...')
       try {
-        await vending.authorizeTokenMinter(tokenId)
-        console.log('[Migrate v6] minter authorized via VM')
-      } catch (e) {
-        console.warn('[Migrate v6] VM authorize-token-minter failed, falling back to token.set-authorized-minter', e)
         const [tokenAddr, tokenName] = tokenId.split('.')
         const dynToken = useDynamicKeyTokenContract(tokenAddr, tokenName)
-        await dynToken.setAuthorizedMinterContract(CONTRACT_ADDRESS, VENDING_NAME)
+        await dynToken.authorizeCallerAsMinter()
         console.log('[Migrate v6] minter authorized via token')
+      } catch (e) {
+        console.warn('[Migrate v6] token authorize-caller-as-minter failed:', e)
+        throw new Error('Failed to authorize vending machine as minter on token contract')
       }
 
       // 5) Optional: set protocol treasury to sender (owner)
