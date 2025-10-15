@@ -20,19 +20,14 @@ export default function HomePage() {
   }, [])
   return (
     <div>
-      <h1 className="text-5xl font-bold mb-8">Profiles</h1>
+      <h1 className="text-5xl font-bold mb-8">Users</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {users.map((user) => (
-          <Link key={user.id} href={`/profile/${user.id}`}>
+          <Link key={user.id} href={`/chat`}>
             <Card className="hover:border-primary transition-colors cursor-pointer">
               <CardContent className="p-6 flex flex-col items-center text-center">
-                <Avatar className="h-20 w-20 mb-4">
-                  <AvatarImage src={user.profileImage ?? undefined} alt={user.displayName} />
-                  <AvatarFallback className="text-2xl">{user.displayName.charAt(0).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <h3 className="font-semibold text-lg mb-1">{user.displayName}</h3>
-                <div className="text-muted-foreground">{user.bnsName}</div>
+                <div className="font-semibold text-lg mb-1 truncate">{user.walletAddress}</div>
               </CardContent>
             </Card>
           </Link>

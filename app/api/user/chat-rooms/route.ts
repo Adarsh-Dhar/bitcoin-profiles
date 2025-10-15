@@ -19,10 +19,14 @@ export async function GET(request: NextRequest) {
     })
 
     if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      )
+      // Auto-create user on first access to chat-rooms to smooth UX
+      try {
+        await prisma.user.create({ data: { walletAddress } })
+      } catch {}
+      const created = await prisma.user.findUnique({ where: { walletAddress } })
+      if (!created) {
+        return NextResponse.json({ chatRooms: [] })
+      }
     }
 
     // Get all chat rooms where the user is a member with ADMIN or MEMBER role
@@ -30,7 +34,7 @@ export async function GET(request: NextRequest) {
       where: {
         members: {
           some: {
-            userId: user.id,
+            userId: (user?.id)!,
             role: {
               in: ['ADMIN', 'MEMBER']
             }
@@ -41,10 +45,7 @@ export async function GET(request: NextRequest) {
         creator: {
           select: {
             id: true,
-            walletAddress: true,
-            bnsName: true,
-            displayName: true,
-            profileImage: true
+            walletAddress: true
           }
         },
         members: {
@@ -57,10 +58,7 @@ export async function GET(request: NextRequest) {
             user: {
               select: {
                 id: true,
-                walletAddress: true,
-                bnsName: true,
-                displayName: true,
-                profileImage: true
+                walletAddress: true
               }
             }
           }
@@ -75,8 +73,7 @@ export async function GET(request: NextRequest) {
             sender: {
               select: {
                 id: true,
-                displayName: true,
-                bnsName: true
+                walletAddress: true
               }
             }
           }

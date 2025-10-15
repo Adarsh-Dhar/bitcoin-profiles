@@ -85,7 +85,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 }
 
 // Default fallback component
-export function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError: () => void }) {
+function DefaultErrorFallback({ error, resetError }: { error?: Error; resetError: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center p-8 text-center">
       <h2 className="text-lg font-semibold text-red-600 mb-2">Something went wrong</h2>

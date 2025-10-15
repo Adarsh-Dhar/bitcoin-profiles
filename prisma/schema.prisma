@@ -17,10 +17,7 @@ generator client {
 model User {
   id            String    @id @default(cuid())
   walletAddress String    @unique // User's unique Stacks wallet address
-  bnsName       String   @unique // The user's BNS name, e.g., "satoshi.btc"
-  displayName   String   // A user-chosen display name
-  profileImage  String?   // URL for the user's profile picture
-  bio           String?   // A short user biography
+  // Profile fields removed — users are now indicated solely by wallet address
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -75,6 +72,7 @@ model ChatRoom {
   name        String   // The name of the chat room
   description String?  // Optional description of the chat room
   isPrivate   Boolean  @default(false) // Whether the chat room is private
+  isLocked    Boolean  @default(true) // When true, the chat room metadata cannot be modified
   createdAt   DateTime @default(now())
 
   // --- Relations ---

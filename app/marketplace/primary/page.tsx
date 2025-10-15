@@ -18,9 +18,6 @@ import { useFactoryContract } from "@/hooks/useFactoryContract"
 interface User {
   id: string
   walletAddress: string
-  bnsName: string
-  displayName: string
-  profileImage?: string
 }
 
 interface MessagePreview {
@@ -29,8 +26,7 @@ interface MessagePreview {
   createdAt: string
   sender: {
     id: string
-    displayName: string
-    bnsName: string
+    walletAddress: string
   }
 }
 
@@ -343,13 +339,10 @@ export default function PrimaryMarketplacePage() {
             <CardContent className="p-5 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3 min-w-0">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={room.creator.profileImage} />
-                    <AvatarFallback>{room.creator.displayName?.charAt(0)?.toUpperCase()}</AvatarFallback>
-                  </Avatar>
+                  
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{room.name}</div>
-                    <div className="text-sm text-muted-foreground truncate">@{room.creator.bnsName}</div>
+                    <div className="text-sm text-muted-foreground truncate">{room.creator.walletAddress}</div>
                   </div>
                 </div>
                 <Badge variant="secondary" className="shrink-0">
@@ -359,7 +352,7 @@ export default function PrimaryMarketplacePage() {
 
               {room.messages?.length ? (
                 <div className="text-sm text-muted-foreground line-clamp-2">
-                  {room.messages[0].sender.displayName}: {room.messages[0].content}
+                  {room.messages[0].sender.walletAddress}: {room.messages[0].content}
                 </div>
               ) : (
                 <div className="text-sm text-muted-foreground italic">No messages yet</div>

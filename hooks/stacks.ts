@@ -2,7 +2,7 @@ import { AppConfig, UserSession, showConnect } from '@stacks/connect';
 import { STACKS_DEVNET, STACKS_MAINNET, STACKS_TESTNET } from '@stacks/network';
 
 const appConfig = new AppConfig(['store_write', 'publish_data']);
-export const userSession = new UserSession({ appConfig });
+const userSession = new UserSession({ appConfig });
 
 export const network = (() => {
   const env = process.env.NEXT_PUBLIC_STACKS_NETWORK?.toLowerCase();

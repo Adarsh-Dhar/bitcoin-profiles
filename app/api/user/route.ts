@@ -9,10 +9,6 @@ export async function GET() {
       select: {
         id: true,
         walletAddress: true,
-        bnsName: true,
-        displayName: true,
-        profileImage: true,
-        bio: true,
         createdAt: true,
       },
     })

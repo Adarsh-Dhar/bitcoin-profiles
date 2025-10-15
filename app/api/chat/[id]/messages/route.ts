@@ -76,10 +76,7 @@ export async function POST(
         sender: {
           select: {
             id: true,
-            walletAddress: true,
-            bnsName: true,
-            displayName: true,
-            profileImage: true
+            walletAddress: true
           }
         }
       }
@@ -158,10 +155,7 @@ export async function GET(
         sender: {
           select: {
             id: true,
-            walletAddress: true,
-            bnsName: true,
-            displayName: true,
-            profileImage: true
+            walletAddress: true
           }
         }
       },

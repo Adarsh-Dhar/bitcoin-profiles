@@ -8,10 +8,7 @@ export async function GET(_request: NextRequest) {
         creator: {
           select: {
             id: true,
-            walletAddress: true,
-            bnsName: true,
-            displayName: true,
-            profileImage: true
+            walletAddress: true
           }
         },
         messages: {
@@ -24,8 +21,7 @@ export async function GET(_request: NextRequest) {
             sender: {
               select: {
                 id: true,
-                displayName: true,
-                bnsName: true
+                walletAddress: true
               }
             }
           }

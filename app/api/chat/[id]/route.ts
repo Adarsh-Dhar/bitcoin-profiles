@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 
+export function PUT() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 })
+}
+
+export function PATCH() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 })
+}
+
+export function DELETE() {
+  return NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 })
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     if (!id) {
       return NextResponse.json(
@@ -22,11 +34,7 @@ export async function GET(
         creator: {
           select: {
             id: true,
-            walletAddress: true,
-            bnsName: true,
-            displayName: true,
-            profileImage: true,
-            bio: true
+            walletAddress: true
           }
         },
         members: {
@@ -37,10 +45,7 @@ export async function GET(
             user: {
               select: {
                 id: true,
-                walletAddress: true,
-                bnsName: true,
-                displayName: true,
-                profileImage: true
+                walletAddress: true
               }
             }
           },
@@ -51,10 +56,7 @@ export async function GET(
             sender: {
               select: {
                 id: true,
-                walletAddress: true,
-                bnsName: true,
-                displayName: true,
-                profileImage: true
+                walletAddress: true
               }
             }
           },

@@ -16,6 +16,9 @@ import { Textarea } from '@/components/ui/textarea'
 import { Loader2, MessageCircle, Users, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { useFactoryContract } from '@/hooks/useFactoryContract'
+import { useDynamicKeyTokenContract } from '@/hooks/useDynamicKeyTokenContract'
+import { useKeyVendingMachineContract } from '@/hooks/useKeyVendingMachineContract'
+import { getSenderAddress } from '@/hooks/stacks'
 
 interface CreateChatRoomDialogProps {
   isOpen: boolean
@@ -56,7 +59,6 @@ export function CreateChatRoomDialog({
 
     if (!userAddress) {
       toast.error('Please connect your wallet first')
-      window.location.href = '/auth'
       return
     }
 
@@ -81,7 +83,6 @@ export function CreateChatRoomDialog({
         // If user not found, redirect to auth page
         if (errorData.error === 'User not found') {
           toast.error('Please create an account first')
-          window.location.href = '/auth'
           return
         }
         
@@ -103,6 +104,44 @@ export function CreateChatRoomDialog({
           data.marketRegistrationData.tokenContract,
           data.marketRegistrationData.creator
         )
+        
+        // After successful market registration, perform v11 admin steps (owner-only)
+        try {
+          const sender = getSenderAddress()
+          const isOwner = sender && typeof sender === 'string' && sender === (data.marketRegistrationData.contractAddress || undefined)
+          const vendingId: string = data.marketRegistrationData.vendingMachine
+          const tokenId: string = data.marketRegistrationData.tokenContract
+          
+          // Parse addresses for token contract
+          const [tokenAddr, tokenName] = tokenId.split('.')
+          const dynToken = useDynamicKeyTokenContract(tokenAddr, tokenName)
+          const vending = useKeyVendingMachineContract(vendingId)
+          
+          // 1) set-authorized-minter on token -> vending contract
+          try {
+            toast.message('Authorizing vending as token minter… confirm in wallet')
+            await dynToken.setAuthorizedMinter(vendingId)
+            toast.success('Authorized vending as token minter')
+          } catch (e) {
+            console.error('[CreateChat] set-authorized-minter failed:', e)
+            // non-blocking
+            toast.warning('Market registered. Authorizing minter failed (you may need deployer wallet).')
+          }
+          
+          // 2) set-protocol-treasury on vending -> current sender
+          try {
+            if (!sender) throw new Error('Wallet not connected')
+            toast.message('Setting protocol treasury… confirm in wallet')
+            await vending.setProtocolTreasury(sender)
+            toast.success('Protocol treasury set')
+          } catch (e) {
+            console.error('[CreateChat] set-protocol-treasury failed:', e)
+            // non-blocking
+            toast.warning('Market registered. Setting treasury failed (owner-only).')
+          }
+        } catch (adminStepErr) {
+          console.warn('[CreateChat] v11 admin steps skipped/failed:', adminStepErr)
+        }
         
         toast.success('Chat room and market registered successfully!')
       } catch (marketError) {
