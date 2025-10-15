@@ -27,6 +27,15 @@
     )
 )
 
+;; Owner-only: set the authorized minter to a specific principal
+(define-public (set-authorized-minter (minter principal))
+    (begin
+        (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+        (var-set authorized-minter (some minter))
+        (ok true)
+    )
+)
+
 ;; Private function to check authorization
 (define-private (is-authorized)
     (match (var-get authorized-minter)

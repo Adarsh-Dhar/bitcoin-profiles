@@ -28,6 +28,7 @@ export function useFactoryContract() {
         functionArgs,
         network,
         appDetails: { name: 'Bitcoin Profiles', icon: `${window.location.origin}/placeholder-logo.png` },
+        postConditions: [], // Disable automatic post-conditions to avoid abort_by_post_condition
         onFinish: (data: any) => {
           try {
             const txId = data?.txId ?? data?.txid ?? data?.txID;

@@ -15,7 +15,7 @@ Clarinet.test({
     // Test initialization by owner
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -30,7 +30,7 @@ Clarinet.test({
     // Test that only owner can initialize
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("another-room"),
@@ -54,7 +54,7 @@ Clarinet.test({
     // Test that only owner can authorize minter
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         user1.address
@@ -66,7 +66,7 @@ Clarinet.test({
     // Test successful authorization by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -83,13 +83,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Test that only owner can register markets
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-123"),
@@ -105,7 +105,7 @@ Clarinet.test({
     // Test successful registration by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-123"),

@@ -193,7 +193,7 @@ export function useMarketOperations() {
 
       // Create vending machine contract instance for the specific market (already created above)
 
-      // Execute the buy transaction against v6 signature with token principal
+      // Execute the buy transaction against v11 signature with token principal
       const txId = await vendingContract.buyKeysWithToken(amount, maxPrice, market.tokenContract);
       console.log('[Buy] submitted', { txId });
 

@@ -15,6 +15,7 @@ export function useDynamicKeyTokenContract(tokenContractAddress?: string, tokenC
       functionArgs,
       network,
       appDetails: { name: 'Bitcoin Profiles', icon: `${window.location.origin}/placeholder-logo.png` },
+      postConditions: [], // Disable automatic post-conditions to avoid abort_by_post_condition
       onFinish: () => {},
     });
   };
@@ -113,6 +114,15 @@ export function useDynamicKeyTokenContract(tokenContractAddress?: string, tokenC
 
     // admin - only contract owner can authorize minter
     authorizeCallerAsMinter: () => call('authorize-caller-as-minter', []),
+    setAuthorizedMinter: (minter: string) => {
+      // Check if it's a contract principal (contains a dot) or standard principal
+      if (minter.includes('.')) {
+        const [addr, name] = minter.split('.');
+        return call('set-authorized-minter', [contractPrincipalCV(addr, name)]);
+      } else {
+        return call('set-authorized-minter', [standardPrincipalCV(minter)]);
+      }
+    },
 
     // minter-only - recipient is always tx-sender in the contract
     mint: (amount: number) => call('mint', [uintCV(amount)]),

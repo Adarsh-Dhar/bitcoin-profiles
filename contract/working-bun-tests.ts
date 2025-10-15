@@ -22,7 +22,7 @@ async function runTests() {
     try {
       // Test initialization by owner
       const result1 = await sdk.callPublicFn(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         ["test-room-123", "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"],
         "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
@@ -31,7 +31,7 @@ async function runTests() {
 
       // Test that only owner can initialize
       const result2 = await sdk.callPublicFn(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         ["another-room", "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -47,7 +47,7 @@ async function runTests() {
     try {
       // Test that only owner can authorize minter
       const result1 = await sdk.callPublicFn(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -56,7 +56,7 @@ async function runTests() {
 
       // Test successful authorization by owner
       const result2 = await sdk.callPublicFn(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
@@ -72,7 +72,7 @@ async function runTests() {
     try {
       // Test buy price calculation
       const result1 = await sdk.callReadOnlyFn(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-buy-price",
         [1],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -80,7 +80,7 @@ async function runTests() {
       console.log("  ✅ Price for 1 key:", result1);
 
       const result2 = await sdk.callReadOnlyFn(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-buy-price",
         [2],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -89,7 +89,7 @@ async function runTests() {
 
       // Test sell price calculation
       const result3 = await sdk.callReadOnlyFn(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-sell-price",
         [1],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -105,18 +105,18 @@ async function runTests() {
     try {
       // Test that only owner can register markets
       const result1 = await sdk.callPublicFn(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
-        ["test-room-123", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7"],
+        ["test-room-123", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11"],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
       );
       console.log("  ✅ Non-owner market registration result:", result1);
 
       // Test successful registration by owner
       const result2 = await sdk.callPublicFn(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
-        ["test-room-123", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7"],
+        ["test-room-123", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11", "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11"],
         "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM"
       );
       console.log("  ✅ Owner market registration result:", result2);
@@ -130,7 +130,7 @@ async function runTests() {
     try {
       // Test getting market by chat room ID
       const result1 = await sdk.callReadOnlyFn(
-        "Factory_v7",
+        "Factory_v11",
         "get-market",
         ["test-room-123"],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"
@@ -139,7 +139,7 @@ async function runTests() {
 
       // Test getting non-existent market
       const result2 = await sdk.callReadOnlyFn(
-        "Factory_v7",
+        "Factory_v11",
         "get-market",
         ["non-existent-room"],
         "ST1SJ3DTE5DN7X54YDH5D64R3BCB6A2AG2ZQ8YPD5"

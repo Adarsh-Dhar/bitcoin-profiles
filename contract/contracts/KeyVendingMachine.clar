@@ -116,14 +116,12 @@
         (asserts! (> amount u0) err-zero-amount)
         (asserts! (<= total-price max-price) err-insufficient-payment)
         
-        ;; Transfer sBTC from buyer
-        ;; Note: In production, use actual sBTC token contract
-        ;; This is simplified - you'd use stx-transfer? or sBTC token transfer
+        ;; Transfer STX from buyer to contract
         (try! (stx-transfer? total-price tx-sender (as-contract tx-sender)))
         
         ;; Distribute fees from contract balance (as the contract)
-        (try! (as-contract (stx-transfer? protocol-fee tx-sender (var-get protocol-treasury))))
-        (try! (as-contract (stx-transfer? creator-fee tx-sender (var-get creator-address))))
+        (try! (as-contract (stx-transfer? protocol-fee (as-contract tx-sender) (var-get protocol-treasury))))
+        (try! (as-contract (stx-transfer? creator-fee (as-contract tx-sender) (var-get creator-address))))
         
         ;; Add to treasury
         (var-set treasury-balance (+ (var-get treasury-balance) treasury-amount))

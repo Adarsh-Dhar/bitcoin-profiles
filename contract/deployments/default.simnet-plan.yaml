@@ -63,17 +63,17 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: Factory_v7
+            contract-name: Factory_v11
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/Factory.clar
             clarity-version: 1
         - emulated-contract-publish:
-            contract-name: KeyToken_v7
+            contract-name: KeyToken_v11
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/KeyToken.clar
             clarity-version: 1
         - emulated-contract-publish:
-            contract-name: KeyVendingMachine_v7
+            contract-name: KeyVendingMachine_v11
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/KeyVendingMachine.clar
             clarity-version: 1

@@ -10,7 +10,7 @@ Clarinet.test({
     // Test initialization by owner
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -25,7 +25,7 @@ Clarinet.test({
     // Test that only owner can initialize
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("another-room"),
@@ -49,7 +49,7 @@ Clarinet.test({
     // Initialize first
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -62,7 +62,7 @@ Clarinet.test({
     // Test setting protocol treasury by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -74,7 +74,7 @@ Clarinet.test({
     // Test that only owner can set treasury
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(user1.address)],
         user1.address
@@ -94,7 +94,7 @@ Clarinet.test({
     // Initialize
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -107,7 +107,7 @@ Clarinet.test({
     // Test buy price calculation with different amounts
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-buy-price",
         [types.uint(1)],
         user1.address
@@ -120,7 +120,7 @@ Clarinet.test({
 
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-buy-price",
         [types.uint(2)],
         user1.address
@@ -134,7 +134,7 @@ Clarinet.test({
     // Test sell price calculation
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "calculate-sell-price",
         [types.uint(1)],
         user1.address
@@ -157,7 +157,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -166,7 +166,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -176,7 +176,7 @@ Clarinet.test({
     // Deploy and setup KeyToken
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -186,9 +186,9 @@ Clarinet.test({
     // Authorize vending machine as minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
@@ -196,12 +196,12 @@ Clarinet.test({
     // Test buying 1 key
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [
           types.uint(1),
           types.uint(2000000), // max price
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -212,7 +212,7 @@ Clarinet.test({
     // Check that user received tokens
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user1.address)],
         user1.address
@@ -233,7 +233,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -242,7 +242,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -252,7 +252,7 @@ Clarinet.test({
     // Deploy and setup KeyToken
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -262,9 +262,9 @@ Clarinet.test({
     // Authorize vending machine as minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
@@ -272,12 +272,12 @@ Clarinet.test({
     // Test buying 0 keys (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [
           types.uint(0),
           types.uint(2000000),
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -288,12 +288,12 @@ Clarinet.test({
     // Test buying with insufficient max price
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [
           types.uint(1),
           types.uint(500000), // too low max price
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -313,7 +313,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -322,7 +322,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -332,7 +332,7 @@ Clarinet.test({
     // Deploy and setup KeyToken
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -342,9 +342,9 @@ Clarinet.test({
     // Authorize vending machine as minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
@@ -352,12 +352,12 @@ Clarinet.test({
     // First buy some keys to have treasury balance
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [
           types.uint(2),
           types.uint(5000000), // max price
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -368,12 +368,12 @@ Clarinet.test({
     // Now sell 1 key
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "sell-keys",
         [
           types.uint(1),
           types.uint(500000), // min price
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -384,7 +384,7 @@ Clarinet.test({
     // Check that user has 1 key left
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user1.address)],
         user1.address
@@ -405,7 +405,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -414,7 +414,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -424,7 +424,7 @@ Clarinet.test({
     // Deploy and setup KeyToken
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -434,9 +434,9 @@ Clarinet.test({
     // Authorize vending machine as minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
@@ -444,12 +444,12 @@ Clarinet.test({
     // Test selling 0 keys (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "sell-keys",
         [
           types.uint(0),
           types.uint(500000),
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -460,12 +460,12 @@ Clarinet.test({
     // Test selling with insufficient treasury balance
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "sell-keys",
         [
           types.uint(1),
           types.uint(500000),
-          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")
+          types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")
         ],
         user1.address
       )
@@ -485,7 +485,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -494,7 +494,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -504,7 +504,7 @@ Clarinet.test({
     // Test get-market-info
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "get-market-info",
         [],
         user1.address
@@ -519,7 +519,7 @@ Clarinet.test({
     // Test get-token-supply-public
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "get-token-supply-public",
         [],
         user1.address
@@ -539,7 +539,7 @@ Clarinet.test({
     // Initialize
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -552,9 +552,9 @@ Clarinet.test({
     // Test that only owner can authorize token minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         user1.address
       )
     ]);
@@ -564,9 +564,9 @@ Clarinet.test({
     // Test successful authorization by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
@@ -585,7 +585,7 @@ Clarinet.test({
     // Initialize and set up
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "initialize",
         [
           types.stringAscii("test-room-123"),
@@ -594,7 +594,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "set-protocol-treasury",
         [types.principal(treasury.address)],
         deployer.address
@@ -604,7 +604,7 @@ Clarinet.test({
     // Deploy and setup KeyToken
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -614,20 +614,20 @@ Clarinet.test({
     // Authorize vending machine as minter
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "authorize-token-minter",
-        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7")],
+        [types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11")],
         deployer.address
       )
     ]);
 
     // Test progressive pricing - buy multiple keys and verify increasing prices
-    const tokenAddr = types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7");
+    const tokenAddr = types.principal("ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11");
 
     // Buy 1st key
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [types.uint(1), types.uint(2000000), tokenAddr],
         user1.address
@@ -639,7 +639,7 @@ Clarinet.test({
     // Buy 2nd key (should be more expensive)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyVendingMachine_v7",
+        "KeyVendingMachine_v11",
         "buy-keys",
         [types.uint(1), types.uint(2000000), tokenAddr],
         user1.address
@@ -651,7 +651,7 @@ Clarinet.test({
     // Check final balance
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user1.address)],
         user1.address

@@ -34,7 +34,7 @@ Clarinet.test({
       // Test initialization by owner
       let block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "initialize",
           [
             types.stringAscii("test-room-123"),
@@ -49,7 +49,7 @@ Clarinet.test({
       // Test that only owner can initialize
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "initialize",
           [
             types.stringAscii("another-room"),
@@ -75,7 +75,7 @@ Clarinet.test({
       // Initialize first
       let block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "initialize",
           [
             types.stringAscii("test-room-123"),
@@ -88,7 +88,7 @@ Clarinet.test({
       // Test setting protocol treasury by owner
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "set-protocol-treasury",
           [types.principal(treasury.address)],
           deployer.address
@@ -100,7 +100,7 @@ Clarinet.test({
       // Test that only owner can set treasury
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "set-protocol-treasury",
           [types.principal(user1.address)],
           user1.address
@@ -122,7 +122,7 @@ Clarinet.test({
       // Initialize
       let block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "initialize",
           [
             types.stringAscii("test-room-123"),
@@ -135,7 +135,7 @@ Clarinet.test({
       // Test buy price calculation with different amounts
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "calculate-buy-price",
           [types.uint(1)],
           user1.address
@@ -148,7 +148,7 @@ Clarinet.test({
 
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "calculate-buy-price",
           [types.uint(2)],
           user1.address
@@ -162,7 +162,7 @@ Clarinet.test({
       // Test sell price calculation
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyVendingMachine_v7",
+          "KeyVendingMachine_v11",
           "calculate-sell-price",
           [types.uint(1)],
           user1.address
@@ -187,7 +187,7 @@ Clarinet.test({
       // Test that only owner can authorize minter
       let block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "authorize-caller-as-minter",
           [],
           user1.address
@@ -199,7 +199,7 @@ Clarinet.test({
       // Test successful authorization by owner
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "authorize-caller-as-minter",
           [],
           deployer.address
@@ -220,7 +220,7 @@ Clarinet.test({
       // Authorize deployer as minter
       let block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "authorize-caller-as-minter",
           [],
           deployer.address
@@ -230,7 +230,7 @@ Clarinet.test({
       // Test minting tokens
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "mint",
           [types.uint(100)],
           deployer.address
@@ -242,7 +242,7 @@ Clarinet.test({
       // Check balance
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "get-balance",
           [types.principal(deployer.address)],
           deployer.address
@@ -254,7 +254,7 @@ Clarinet.test({
       // Test burning tokens
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "burn",
           [types.uint(50)],
           deployer.address
@@ -266,7 +266,7 @@ Clarinet.test({
       // Check balance after burn
       block = chain.mineBlock([
         Tx.contractCall(
-          "KeyToken_v7",
+          "KeyToken_v11",
           "get-balance",
           [types.principal(deployer.address)],
           deployer.address
@@ -285,13 +285,13 @@ Clarinet.test({
     await runTest("Factory - Register Market", async () => {
       const deployer = accounts.get("deployer")!;
       const user1 = accounts.get("wallet_1")!;
-      const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-      const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+      const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+      const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
       // Test that only owner can register markets
       let block = chain.mineBlock([
         Tx.contractCall(
-          "Factory_v7",
+          "Factory_v11",
           "register-market",
           [
             types.stringAscii("test-room-123"),
@@ -307,7 +307,7 @@ Clarinet.test({
       // Test successful registration by owner
       block = chain.mineBlock([
         Tx.contractCall(
-          "Factory_v7",
+          "Factory_v11",
           "register-market",
           [
             types.stringAscii("test-room-123"),
@@ -332,13 +332,13 @@ Clarinet.test({
     await runTest("Factory - Get Market", async () => {
       const deployer = accounts.get("deployer")!;
       const user1 = accounts.get("wallet_1")!;
-      const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-      const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+      const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+      const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
       // Register a market first
       let block = chain.mineBlock([
         Tx.contractCall(
-          "Factory_v7",
+          "Factory_v11",
           "register-market",
           [
             types.stringAscii("test-room-456"),
@@ -352,7 +352,7 @@ Clarinet.test({
       // Test getting market by chat room ID
       block = chain.mineBlock([
         Tx.contractCall(
-          "Factory_v7",
+          "Factory_v11",
           "get-market",
           [types.stringAscii("test-room-456")],
           user1.address
@@ -366,7 +366,7 @@ Clarinet.test({
       // Test getting non-existent market
       block = chain.mineBlock([
         Tx.contractCall(
-          "Factory_v7",
+          "Factory_v11",
           "get-market",
           [types.stringAscii("non-existent-room")],
           user1.address

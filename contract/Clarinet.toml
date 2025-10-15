@@ -6,13 +6,13 @@ telemetry = true
 cache_dir = "./.cache"
 
 
-[contracts.Factory_v7]
+[contracts.Factory_v11]
 path = "contracts/Factory.clar"
 
-[contracts.KeyVendingMachine_v7]
+[contracts.KeyVendingMachine_v11]
 path = "contracts/KeyVendingMachine.clar"
 
-[contracts.KeyToken_v7]
+[contracts.KeyToken_v11]
 path = "contracts/KeyToken.clar"
 
 [repl.analysis]

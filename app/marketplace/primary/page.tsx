@@ -216,7 +216,7 @@ export default function PrimaryMarketplacePage() {
     }
   }
 
-  const handleMigrateToV6 = async (roomId: string | number) => {
+  const handleMigrateTov11 = async (roomId: string | number) => {
     try {
       const roomIdStr = String(roomId)
       const sender = getSenderAddress()
@@ -235,52 +235,63 @@ export default function PrimaryMarketplacePage() {
       const vendingId = `${CONTRACT_ADDRESS}.${VENDING_NAME}`
       const tokenId = `${CONTRACT_ADDRESS}.${KEYTOKEN_TEMPLATE_NAME}`
 
-      console.log('[Migrate v6] start', { roomIdStr, vendingId, tokenId, sender })
+      console.log('[Migrate v11] start', { roomIdStr, vendingId, tokenId, sender })
 
       // 1) Unregister existing market (if any)
       try {
-        console.log('[Migrate v6] unregister...')
+        console.log('[Migrate v11] unregister...')
         await factory.unregisterMarket(roomIdStr)
-        console.log('[Migrate v6] unregistered')
+        console.log('[Migrate v11] unregistered')
       } catch (e) {
-        console.warn('[Migrate v6] unregister skipped/failed (continuing):', e)
+        console.warn('[Migrate v11] unregister skipped/failed (continuing):', e)
       }
 
-      // 2) Register v6 market
-      console.log('[Migrate v6] register v6...', { vendingId, tokenId })
+      // 2) Register v11 market
+      console.log('[Migrate v11] register v11...', { vendingId, tokenId })
       await factory.registerMarket(roomIdStr, vendingId, tokenId)
-      console.log('[Migrate v6] registered')
+      console.log('[Migrate v11] registered')
 
-      // 3) v6 uses explicit authorization path (no initialize with token)
+      // 3) v11 uses explicit authorization path (no initialize with token)
       const vending = useKeyVendingMachineContract(vendingId)
 
-      // 4) Authorize vending as minter on KeyToken_v6
-      console.log('[Migrate v6] authorize minter on token...')
+      // 4) Authorize vending as minter on KeyToken_v11
+      console.log('[Migrate v11] authorize minter on token...')
       try {
         const [tokenAddr, tokenName] = tokenId.split('.')
         const dynToken = useDynamicKeyTokenContract(tokenAddr, tokenName)
-        await dynToken.authorizeCallerAsMinter()
-        console.log('[Migrate v6] minter authorized via token')
+        // Parse the vendingId to get address and name
+        const [vendingAddr, vendingName] = vendingId.split('.')
+        console.log('[Migrate v11] calling setAuthorizedMinter with vending contract:', { vendingAddr, vendingName })
+        // Set the vending machine contract as the authorized minter
+        const result = await dynToken.setAuthorizedMinter(vendingId)
+        console.log('[Migrate v11] setAuthorizedMinter result:', result)
+        console.log('[Migrate v11] minter authorized via token contract')
       } catch (e) {
-        console.warn('[Migrate v6] token authorize-caller-as-minter failed:', e)
+        console.error('[Migrate v11] token set-authorized-minter failed with error:', e)
+        console.error('[Migrate v11] error details:', {
+          message: e instanceof Error ? e.message : String(e),
+          stack: e instanceof Error ? e.stack : undefined,
+          vendingId,
+          tokenId
+        })
         throw new Error('Failed to authorize vending machine as minter on token contract')
       }
 
       // 5) Optional: set protocol treasury to sender (owner)
       try {
-        console.log('[Migrate v6] set protocol treasury...')
+        console.log('[Migrate v11] set protocol treasury...')
         await vending.setProtocolTreasury(sender)
-        console.log('[Migrate v6] protocol treasury set')
+        console.log('[Migrate v11] protocol treasury set')
       } catch (e) {
-        console.warn('[Migrate v6] set protocol treasury failed (non-blocking):', e)
+        console.warn('[Migrate v11] set protocol treasury failed (non-blocking):', e)
       }
 
-      toast.success('Migrated market to v6 successfully')
+      toast.success('Migrated market to v11 successfully')
       // Refresh market info
       await loadMarketInfo(roomIdStr)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      console.error('[Migrate v6] failed:', msg)
+      console.error('[Migrate v11] failed:', msg)
       toast.error(msg || 'Migration failed')
     } finally {
       setIsMigrating(false)
@@ -382,12 +393,32 @@ export default function PrimaryMarketplacePage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-2">
-                <Button variant="secondary" onClick={() => router.push(`/chat/${room.id}`)} className="gap-2">
-                  <MessageCircle className="h-4 w-4" />
-                  Enter
-                </Button>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <Button variant="secondary" onClick={() => router.push(`/chat/${room.id}`)} className="gap-2">
+                    <MessageCircle className="h-4 w-4" />
+                    Enter
+                  </Button>
+                  <Button 
+                    onClick={() => handleBuyOneKey(room.id)} 
+                    className="gap-2" 
+                    disabled={isBuying}
+                    variant={buyingRoomId === room.id ? "default" : "default"}
+                  >
+                    {isBuying && buyingRoomId === room.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Buying...
+                      </>
+                    ) : (
+                      <>
+                        Buy 1 key
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
                   {(() => {
                     const sender = getSenderAddress()
                     const isOwner = sender && sender === CONTRACT_ADDRESS
@@ -419,7 +450,7 @@ export default function PrimaryMarketplacePage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleMigrateToV6(room.id)}
+                        onClick={() => handleMigrateTov11(room.id)}
                         disabled={isMigrating && migratingRoomId === room.id}
                         className="gap-2"
                       >
@@ -429,29 +460,11 @@ export default function PrimaryMarketplacePage() {
                             Migrating…
                           </>
                         ) : (
-                          <>Migrate to v6</>
+                          <>Migrate to v11</>
                         )}
                       </Button>
                     )
                   })()}
-                  <Button 
-                    onClick={() => handleBuyOneKey(room.id)} 
-                    className="gap-2" 
-                    disabled={isBuying}
-                    variant={buyingRoomId === room.id ? "default" : "default"}
-                  >
-                    {isBuying && buyingRoomId === room.id ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Buying...
-                      </>
-                    ) : (
-                      <>
-                        Buy 1 key
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
                 </div>
               </div>
             </CardContent>

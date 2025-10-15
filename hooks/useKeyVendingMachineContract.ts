@@ -1,5 +1,5 @@
 import { openContractCall } from '@stacks/connect';
-import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, stringAsciiCV, cvToJSON, ClarityValue, contractPrincipalCV } from '@stacks/transactions';
+import { fetchCallReadOnlyFunction, uintCV, standardPrincipalCV, stringAsciiCV, cvToJSON, ClarityValue, contractPrincipalCV, makeContractCall, broadcastTransaction, AnchorMode, FungibleConditionCode, PostConditionMode } from '@stacks/transactions';
 import { CONTRACT_ADDRESS, VENDING_NAME, network, getSenderAddress } from './stacks';
 
 export function useKeyVendingMachineContract(contractId?: string) {
@@ -14,7 +14,7 @@ export function useKeyVendingMachineContract(contractId?: string) {
     return { address: CONTRACT_ADDRESS, name: VENDING_NAME };
   };
 
-  const call = async (functionName: string, functionArgs: any[]) => {
+  const call = async (functionName: string, functionArgs: any[], overrides?: { postConditions?: any[]; postConditionMode?: PostConditionMode }) => {
     const senderAddress = getSenderAddress();
     if (!senderAddress) throw new Error('Wallet not connected');
     const target = getTarget();
@@ -37,6 +37,8 @@ export function useKeyVendingMachineContract(contractId?: string) {
           functionArgs,
           network,
           appDetails: { name: 'Bitcoin Profiles', icon: `${window.location.origin}/placeholder-logo.png` },
+          postConditions: overrides?.postConditions ?? [],
+          postConditionMode: overrides?.postConditionMode ?? PostConditionMode.Deny,
           onFinish: (data: any) => {
             try {
               const txId: string | undefined = data?.txId || data?.txid || data?.txId?.txId;
@@ -50,7 +52,7 @@ export function useKeyVendingMachineContract(contractId?: string) {
             console.warn('[VM.call] user canceled');
             reject(new Error('User canceled'));
           },
-        });
+        } as any);
       } catch (e) {
         console.error('[VM.call] openContractCall error', e);
         reject(e as Error);
@@ -114,6 +116,11 @@ export function useKeyVendingMachineContract(contractId?: string) {
       ]);
     },
     setProtocolTreasury: (treasury: string) => call('set-protocol-treasury', [standardPrincipalCV(treasury)]),
+    authorizeTokenMinter: (tokenContractId: string) => {
+      const [addr, name] = (tokenContractId || '').split('.');
+      if (!addr || !name) throw new Error(`Invalid token contract id: ${tokenContractId}`);
+      return call('authorize-token-minter', [contractPrincipalCV(addr, name)]);
+    },
 
     // pricing read-onlys (decoded to plain JSON values)
     calculateBuyPrice: (amount: number | bigint) => roDecoded('calculate-buy-price', [uintCV(amount as any)]),
@@ -167,11 +174,15 @@ export function useKeyVendingMachineContract(contractId?: string) {
     // sellKeys: (amount: number | bigint, minPrice: number | bigint) =>
     //   call('sell-keys', [uintCV(amount as any), uintCV(minPrice as any)]),
 
-    // trading (v6 signatures include token contract principal)
+    // trading (v11 signatures include token contract principal)
     buyKeysWithToken: (amount: number | bigint, maxPrice: number | bigint, tokenContractId: string) => {
       const [addr, name] = (tokenContractId || '').split('.');
       if (!addr || !name) throw new Error(`Invalid token contract id: ${tokenContractId}`);
-      return call('buy-keys', [uintCV(amount as any), uintCV(maxPrice as any), contractPrincipalCV(addr, name)]);
+      return call(
+        'buy-keys',
+        [uintCV(amount as any), uintCV(maxPrice as any), contractPrincipalCV(addr, name)],
+        { postConditions: [], postConditionMode: PostConditionMode.Allow }
+      );
     },
     sellKeysWithToken: (amount: number | bigint, minPrice: number | bigint, tokenContractId: string) => {
       const [addr, name] = (tokenContractId || '').split('.');

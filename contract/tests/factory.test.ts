@@ -5,13 +5,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Test that only owner can register markets
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-123"),
@@ -27,7 +27,7 @@ Clarinet.test({
     // Test successful registration by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-123"),
@@ -50,13 +50,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Register a market first
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-456"),
@@ -70,7 +70,7 @@ Clarinet.test({
     // Test getting market by chat room ID
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "get-market",
         [types.stringAscii("test-room-456")],
         user1.address
@@ -84,7 +84,7 @@ Clarinet.test({
     // Test getting non-existent market
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "get-market",
         [types.stringAscii("non-existent-room")],
         user1.address
@@ -100,13 +100,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Register a market first
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("test-room-789"),
@@ -120,7 +120,7 @@ Clarinet.test({
     // Test has-market for existing room
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "has-market",
         [types.stringAscii("test-room-789")],
         user1.address
@@ -132,7 +132,7 @@ Clarinet.test({
     // Test has-market for non-existent room
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "has-market",
         [types.stringAscii("non-existent-room")],
         user1.address
@@ -148,15 +148,15 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine1 = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract1 = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
-    const vendingMachine2 = "ST2NEB84ASENDXKYG9QW7QW6VV2S9SF4A11TRSBVY.KeyVendingMachine_v7";
-    const tokenContract2 = "ST2NEB84ASENDXKYG9QW7QW6VV2S9SF4A11TRSBVY.KeyToken_v7";
+    const vendingMachine1 = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract1 = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
+    const vendingMachine2 = "ST2NEB84ASENDXKYG9QW7QW6VV2S9SF4A11TRSBVY.KeyVendingMachine_v11";
+    const tokenContract2 = "ST2NEB84ASENDXKYG9QW7QW6VV2S9SF4A11TRSBVY.KeyToken_v11";
 
     // Check initial count
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "get-total-markets",
         [],
         user1.address
@@ -168,7 +168,7 @@ Clarinet.test({
     // Register first market
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("room-1"),
@@ -182,7 +182,7 @@ Clarinet.test({
     // Check count after first market
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "get-total-markets",
         [],
         user1.address
@@ -194,7 +194,7 @@ Clarinet.test({
     // Register second market
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("room-2"),
@@ -208,7 +208,7 @@ Clarinet.test({
     // Check count after second market
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "get-total-markets",
         [],
         user1.address
@@ -224,13 +224,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Test registering with empty room ID (should fail)
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii(""),
@@ -246,7 +246,7 @@ Clarinet.test({
     // Test registering same room twice (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("duplicate-room"),
@@ -256,7 +256,7 @@ Clarinet.test({
         deployer.address
       ),
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("duplicate-room"),
@@ -277,13 +277,13 @@ Clarinet.test({
   async fn(chain: Chain, accounts: Map<string, Account>) {
     const deployer = accounts.get("deployer")!;
     const user1 = accounts.get("wallet_1")!;
-    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v7";
-    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v7";
+    const vendingMachine = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyVendingMachine_v11";
+    const tokenContract = "ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM.KeyToken_v11";
 
     // Register a market first
     let block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "register-market",
         [
           types.stringAscii("room-to-remove"),
@@ -297,7 +297,7 @@ Clarinet.test({
     // Test that only owner can unregister
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "unregister-market",
         [types.stringAscii("room-to-remove")],
         user1.address
@@ -309,7 +309,7 @@ Clarinet.test({
     // Test successful unregistration by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "unregister-market",
         [types.stringAscii("room-to-remove")],
         deployer.address
@@ -321,7 +321,7 @@ Clarinet.test({
     // Verify market is no longer available
     block = chain.mineBlock([
       Tx.contractCall(
-        "Factory_v7",
+        "Factory_v11",
         "has-market",
         [types.stringAscii("room-to-remove")],
         user1.address

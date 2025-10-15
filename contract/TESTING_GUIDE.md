@@ -211,8 +211,8 @@ In the console, you can:
 
 ```typescript
 // In Clarinet console
-(contract-call? .KeyVendingMachine_v7 get-market-info)
-(contract-call? .KeyToken_v7 get-total-supply)
+(contract-call? .KeyVendingMachine_v11 get-market-info)
+(contract-call? .KeyToken_v11 get-total-supply)
 ```
 
 ## Frontend Integration

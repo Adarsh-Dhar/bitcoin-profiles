@@ -70,17 +70,22 @@ export default function ChatRoomPage() {
     if (storedAddress) {
       setUserAddress(storedAddress)
       fetchChatRoom()
-      
-      // Set up polling for new messages every 5 seconds
-      const interval = setInterval(() => {
-        fetchMessages() // Only fetch messages, not the entire chat room
-      }, 5000)
-      
-      return () => clearInterval(interval)
     } else {
       setIsLoading(false)
     }
   }, [chatRoomId])
+
+  // Set up polling for new messages after userAddress is set
+  useEffect(() => {
+    if (!userAddress) return
+
+    // Set up polling for new messages every 5 seconds
+    const interval = setInterval(() => {
+      fetchMessages() // Only fetch messages, not the entire chat room
+    }, 5000)
+    
+    return () => clearInterval(interval)
+  }, [userAddress, chatRoomId])
 
   // Check membership when userAddress or chatRoom changes
   useEffect(() => {
@@ -141,11 +146,20 @@ export default function ChatRoomPage() {
   }
 
   const fetchMessages = async () => {
+    // Don't fetch if we don't have userAddress
+    if (!userAddress) {
+      return
+    }
+
     try {
       const response = await fetch(`/api/chat/${chatRoomId}/messages?walletAddress=${userAddress}`)
       
       if (!response.ok) {
-        throw new Error('Failed to fetch messages')
+        // Don't log errors for 403 (not a member) as this is expected for non-members
+        if (response.status !== 403) {
+          console.error('Error fetching messages:', response.status, response.statusText)
+        }
+        return
       }
       
       const data = await response.json()

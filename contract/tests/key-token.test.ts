@@ -9,7 +9,7 @@ Clarinet.test({
     // Test that only owner can authorize minter
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         user1.address
@@ -21,7 +21,7 @@ Clarinet.test({
     // Test successful authorization by owner
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -41,7 +41,7 @@ Clarinet.test({
     // Authorize deployer as minter
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
@@ -51,7 +51,7 @@ Clarinet.test({
     // Test minting tokens
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "mint",
         [types.uint(100)],
         deployer.address
@@ -63,7 +63,7 @@ Clarinet.test({
     // Check balance
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(deployer.address)],
         deployer.address
@@ -75,7 +75,7 @@ Clarinet.test({
     // Test burning tokens
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "burn",
         [types.uint(50)],
         deployer.address
@@ -87,7 +87,7 @@ Clarinet.test({
     // Check balance after burn
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(deployer.address)],
         deployer.address
@@ -108,13 +108,13 @@ Clarinet.test({
     // Authorize deployer as minter and mint tokens
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "mint",
         [types.uint(100)],
         deployer.address
@@ -124,7 +124,7 @@ Clarinet.test({
     // Test transfer from deployer to user1
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "transfer",
         [
           types.uint(30),
@@ -141,13 +141,13 @@ Clarinet.test({
     // Check balances
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(deployer.address)],
         deployer.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user1.address)],
         user1.address
@@ -160,7 +160,7 @@ Clarinet.test({
     // Test transfer from user1 to user2
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "transfer",
         [
           types.uint(10),
@@ -177,13 +177,13 @@ Clarinet.test({
     // Check final balances
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user1.address)],
         user1.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-balance",
         [types.principal(user2.address)],
         user2.address
@@ -205,13 +205,13 @@ Clarinet.test({
     // Authorize deployer as minter and mint tokens
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "mint",
         [types.uint(100)],
         deployer.address
@@ -221,7 +221,7 @@ Clarinet.test({
     // Test minting 0 tokens (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "mint",
         [types.uint(0)],
         deployer.address
@@ -233,7 +233,7 @@ Clarinet.test({
     // Test burning more tokens than available (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "burn",
         [types.uint(200)],
         deployer.address
@@ -245,7 +245,7 @@ Clarinet.test({
     // Test transferring 0 tokens (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "transfer",
         [
           types.uint(0),
@@ -262,7 +262,7 @@ Clarinet.test({
     // Test transferring to same address (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "transfer",
         [
           types.uint(10),
@@ -279,7 +279,7 @@ Clarinet.test({
     // Test unauthorized transfer (should fail)
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "transfer",
         [
           types.uint(10),
@@ -304,25 +304,25 @@ Clarinet.test({
     // Test token metadata
     let block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-name",
         [],
         user1.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-symbol",
         [],
         user1.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-decimals",
         [],
         user1.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-total-supply",
         [],
         user1.address
@@ -337,13 +337,13 @@ Clarinet.test({
     // Mint some tokens and check supply
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "authorize-caller-as-minter",
         [],
         deployer.address
       ),
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "mint",
         [types.uint(50)],
         deployer.address
@@ -352,7 +352,7 @@ Clarinet.test({
 
     block = chain.mineBlock([
       Tx.contractCall(
-        "KeyToken_v7",
+        "KeyToken_v11",
         "get-total-supply",
         [],
         user1.address

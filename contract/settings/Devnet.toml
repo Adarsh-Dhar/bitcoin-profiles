@@ -72,7 +72,7 @@ balance = 100_000_000_000_000
 sbtc_balance = 1_000_000_000
 # secret_key: 6a1a754ba863d7bab14adbbc3f8ebb090af9e871ace621d3e5ab634e1422885e01
 # stx_address: ST3NBRSFKX28FQ2ZJ1MAKX58HKHSDGNV5N7R21XCP
-# btc_address: n2v875jbJ4RjBnTjgbfikDfnwsDV5iUByw
+# btc_address: n2v975jbJ4RjBnTjgbfikDfnwsDV5iUByw
 
 [accounts.faucet]
 mnemonic = "shadow private easily thought say logic fault paddle word top book during ignore notable orange flight clock image wealth health outside kitten belt reform"
